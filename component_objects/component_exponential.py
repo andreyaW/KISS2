@@ -5,14 +5,13 @@ Implements an exponential failure model component.
 """
 
 from dataclasses import dataclass
-from shipClass_continous.objects import BasicObject
-from .base_component import BaseComponent
+from component_objects.base_component import BaseComponent
 
 
 import numpy as np
 
 @dataclass
-class ExponentialComponent(BaseComponent, BasicObject):
+class ExponentialComponent(BaseComponent):
     """Component with exponentially distributed failure times."""
 
     def sample_failure_time(self) -> float:

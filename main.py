@@ -17,18 +17,18 @@ def main():
         pump.simulate(t_end=500, dt=1)  # 500 time units, 1 per step
         failure_times.append(pump.history[-1, 0])  # record the time of last state change
 
-    plt.figure(figsize=(10, 5))
-    plt.hist(failure_times, bins=30, alpha=0.7, color='blue', edgecolor='black')
-    plt.xlabel("Time to Failure")
-    plt.ylabel("Number of Failures")
-    plt.title("Histogram of Failure Times for 1000 Exponential Components")
-    plt.grid()
-    plt.show()
+    # plt.figure(figsize=(10, 5))
+    # plt.hist(failure_times, bins=30, alpha=0.7, color='blue', edgecolor='black')
+    # plt.xlabel("Time to Failure")
+    # plt.ylabel("Number of Failures")
+    # plt.title("Histogram of Failure Times for 1000 Exponential Components")
+    # plt.grid()
+    # plt.show()
 
-    # # simulate a weibull component
-    # pump2 = WeibullComponent(name="Pump B", MTTF=100, MTTR=10, shape=1.5)
-    # pump2.simulate(t_end=500, dt=1)  # 500 time units, 1 per step
-    # print(pump2)
+    # simulate a weibull component
+    pump2 = WeibullComponent(name="Pump B", MTTF=100, MTTR=10, shape=1.5)
+    pump2.simulate(t_end=500, dt=1)  # 500 time units, 1 per step
+    print(pump2)
 
     # plot the histories of both components in a single plot
     plt.figure(figsize=(10, 5))

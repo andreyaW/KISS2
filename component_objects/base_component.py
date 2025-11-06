@@ -8,12 +8,12 @@ Provides a clear API for different reliability/failure models.
 
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
-import numpy as np
+from objects import BasicObject
 
 @dataclass
-class BaseComponent(ABC):
+class BaseComponent(BasicObject, ABC):
     """
-    Abstract base class for components in a reliability simulation.
+    Abstract base class for components in long-term reliability simulation.
     """
     name: str
     MTTF: float
@@ -29,17 +29,20 @@ class BaseComponent(ABC):
             raise ValueError(f"{self.name}: MTTF must be positive.")
         self.reset_failure_time()
 
-    # def __repr__(self):
-    #     return f"{self.__class__.__name__}(name={self.name}, state={self.state})"
-
     # ABSTRACT METHODS = methods all subclasses MUST implement
     @abstractmethod
     def sample_failure_time(self) -> float:
         """
         Sample and return a random time to failure according to the component's failure model.
-        * Must be implemented by all subclasses.
         """
-        pass
+        return NotImplementedError
+
+    @abstractmethod
+    def __repr__(self):
+        """
+        Return a string representation of the component.
+        """
+        return NotImplementedError
 
     # COMMON METHODS = methods shared by all subclasses (inherited as-is)
     def reset_failure_time(self):
@@ -56,20 +59,8 @@ class BaseComponent(ABC):
         self.current_time += dt
         if self.current_time >= self.time_to_failure:
             self.state = 0  # "failed"
-            # logger.info(f"{self.name} failed at time {self.current_time:.2f}")
 
     def repair(self):
         """Repair the component and reset failure time.
         DEFAULT: repair time is sampled from lognormal distribution."""
-        if self.state == 1:  # "working"
-            return
-        repair_time = np.random.lognormal(mean=np.log(self.MTTR), sigma=0.1)
-        # logger.info(f"{self.name} repaired in {repair_time:.2f} time units.")
-        self.reset_failure_time()
-
-    def is_working(self) -> bool:
-        """Return True if operational."""
-        return self.state == 1  # "working"
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, ttf={self.time_to_failure:.2f})"
+        pass  # IMPLEMENT REPAIR LOGIC HERE
