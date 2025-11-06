@@ -4,6 +4,7 @@ from typing import Generic, TypeVar
 
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 
 # -------------------------------------------------------
 # GLOBAL LOGGER CONFIGURATION
@@ -36,7 +37,6 @@ class BasicObject(ABC):
     def __init__(self, name: str):
         self.name = name
         self.history = np.array([])  # Records state changes over time (time, state)
-
 
     # ABSTRACT METHODS = methods all subclasses MUST implement
     @abstractmethod
@@ -82,3 +82,15 @@ class BasicObject(ABC):
             new_history[i-1] = (current_time, self.state)
         self.history = np.append(self.history, new_history, axis=0) # Append new history records
         BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
+
+    def plot_history(self):
+        """Plot the history of the object's state over time."""
+        times = self.history[:, 0]
+        states = self.history[:, 1]
+        plt.plot(times, states, drawstyle='steps-post', label=self.name)
+        # plt.step(times, states, where='post')
+        plt.title(f"State History of {self.name}")
+        plt.xlabel("Time")
+        plt.ylabel("State")
+        plt.ylim(-0.1, 1.1)
+        plt.grid()

@@ -7,7 +7,6 @@ Implements an exponential failure model component.
 from dataclasses import dataclass
 from component_objects.base_component import BaseComponent
 
-
 import numpy as np
 
 @dataclass
