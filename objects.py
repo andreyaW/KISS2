@@ -88,7 +88,7 @@ class BasicObject(ABC):
         times = self.history[:, 0]
         states = self.history[:, 1]
         plt.plot(times, states, label=self.name) #drawstyle='steps-post',
-        plt.title(f"State History of {self.name}")
+        plt.title(f"State History of {self.name.title()}")
         plt.xlabel("Time")
         plt.ylabel("State")
         plt.ylim(-0.1, 1.1)
