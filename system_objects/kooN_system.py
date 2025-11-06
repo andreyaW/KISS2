@@ -1,7 +1,7 @@
 """
-parallel_system.py
+k-out-of-n_system.py
 
-Implements a parallel system model.
+Implements a k-out-of-n system model.
 """
 
 from system_objects.base_system import BaseSystem
@@ -9,13 +9,14 @@ from system_objects.base_system import BaseSystem
 from dataclasses import dataclass
 
 @dataclass
-class ParallelSystem(BaseSystem):
-    """A system where components are arranged in parallel."""
-    # self.parallels : List[tuple] = []
+class KOutOfNSystem(BaseSystem):
+    """A system where k out of n components must be working."""
+
+    k: int = 1# Minimum number of working components required for system to be "working"
 
     def structure_function(self) -> int:
         """Determine overall system state based on component states."""
-        if any(component.state == 1 for component in self.components):
+        if sum(component.state == 1 for component in self.components) >= self.k:
             return 1  # "working"
         return 0  # "failed"
 

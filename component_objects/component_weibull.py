@@ -17,4 +17,4 @@ class WeibullComponent(BaseComponent):
         return np.random.weibull(self.shape) * self.MTTF
     
     def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name}, state={self.state}), distribution=Weibull(shape={self.shape})"
+        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, distribution=Weibull(shape={self.shape})"

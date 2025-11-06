@@ -18,4 +18,4 @@ class ExponentialComponent(BaseComponent):
         return np.random.exponential(self.MTTF)
     
     def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name}, state={self.state}), distribution=Exponential"
+        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, distribution=Exponential)"

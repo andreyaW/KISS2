@@ -87,8 +87,7 @@ class BasicObject(ABC):
         """Plot the history of the object's state over time."""
         times = self.history[:, 0]
         states = self.history[:, 1]
-        plt.plot(times, states, drawstyle='steps-post', label=self.name)
-        # plt.step(times, states, where='post')
+        plt.plot(times, states, label=self.name) #drawstyle='steps-post',
         plt.title(f"State History of {self.name}")
         plt.xlabel("Time")
         plt.ylabel("State")
