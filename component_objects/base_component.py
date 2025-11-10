@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 base_component.py
 
@@ -9,6 +8,8 @@ Provides a clear API for different reliability/failure models.
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from objects import BasicObject
+
+import numpy as np
 
 @dataclass
 class BaseComponent(BasicObject, ABC):
@@ -21,7 +22,7 @@ class BaseComponent(BasicObject, ABC):
     states: dict[int, str] = field(default_factory=lambda: {1: "working", 0: "failed"})
     state: int = field(default=1, init=False)               # forces initial state to "working"
     time_to_failure: float = field(init=False)              # sampled time to failure
-    history: list[tuple[float, int]] = field(default_factory=list, init=False)  # (time, state) records
+    history: np.ndarray[tuple[float, int]] = field(default_factory=list, init=False)  # (time, state) records
 
     def __post_init__(self):
         """Automatically initialize failure time when the component is created."""
@@ -60,6 +61,7 @@ class BaseComponent(BasicObject, ABC):
         if self.current_time >= self.time_to_failure:
             self.state = 0  # "failed"
 
+# -------------------------------
     def repair(self):
         """Repair the component and reset failure time.
         DEFAULT: repair time is sampled from lognormal distribution."""
