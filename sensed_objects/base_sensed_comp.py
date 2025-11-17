@@ -17,8 +17,8 @@ import numpy as np
 class BaseSensedComponent(BasicObject, ABC):
     comp: base_component
     sensors: base_sensor
-    history
-    sensed_history
+    history: np.ndarray
+    sensed_history: np.ndarray
     
     # ABSTRACT METHODS = methods all subclasses MUST implement
     @abstractmethod
