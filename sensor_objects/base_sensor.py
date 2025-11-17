@@ -57,11 +57,18 @@ class BaseSensor(ABC):
     # -------------------------------------------------------------------------
     # PLOTTING FUNCTION
     # -------------------------------------------------------------------------
-    def plot_history(self):
+    def plot_history(self, sensed_or_truth='sensed'):
         """Plot the sensor’s recorded sensed states."""
 
-        hist = np.array(self.sensed_history)
+        if sensed_or_truth == 'sensed': 
+            hist = np.array(self.sensed_history)
+        elif sensed_or_truth == 'truth':
+            hist= np.array(self.history)
+        else: 
+            print(f"please specify which history to plot for this sensor {{self.name}}, 'sensed' or 'truth' ")
         plt.plot(hist[:, 0], hist[:, 1], marker="*", linestyle="--", label=f"{self.name} ({self.quality})")
+        
+        
         plt.xlabel("Time")
         plt.ylabel("Sensed State")
         plt.title(f"Sensor Readings: {self.name}")

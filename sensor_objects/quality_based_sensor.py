@@ -54,11 +54,14 @@ class QualityBasedSensor(BaseSensor):
         # initiailize sensor readings as a default (absurd) value
         default_init_val = 30
         sensed_history = np.full((len(true_states),2), default_init_val)
+        sensor_state_history = np.empty_like(sensed_history)
 
         # assuming initial reading is correct 
         self.sensed_history = self.attached_object.history[0]
         self.sensed_history = self.sensed_history.reshape(1,2)
-
+        self.history = np.array([[true_times[0], 1]])
+        self.history.reshape(1,2)
+        
         # use obs matrix to determine the sensor readings
         sensed_states = deepcopy(true_states)
         for state in range(self.observation_probs.shape[0]):
@@ -81,12 +84,14 @@ class QualityBasedSensor(BaseSensor):
         #                     f"true_history={true_states},\n sensed={sensed_states}")
 
         # Sensor working history: 1 if match, 0 if not
-        # sensor_working = sensed_history[:,1] == true_states
-        # sensor_working_history = np.array([true_times, sensor_working])
-
+        sensor_working = (sensed_history[:,1] == true_states)
+        sensor_state_history[:,0] = true_times
+        sensor_state_history[:,1] = sensor_working
+        
         # Update histories
         self.sensed_history = np.append(self.sensed_history, sensed_history, axis=0)
-        # self.history = np.append(self.history, sensor_working_history, axis=0)
+        self.history = np.append(self.history, sensor_state_history, axis=0)
+        
 
 
     
