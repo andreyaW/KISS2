@@ -3,7 +3,6 @@ services:
     build: .
     container_name: kiss2_env
     volumes:
-      - "Z:/KISS2:/app"
+      - "C:/Users/adware/Desktop/KISS2:/app"  # your local project folder
     ports:
       - "8888:8888"
-    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
