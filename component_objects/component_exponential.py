@@ -9,6 +9,7 @@ from component_objects.base_component import BaseComponent
 
 import numpy as np
 
+
 @dataclass
 class ExponentialComponent(BaseComponent):
     """Component with exponentially distributed failure times."""
