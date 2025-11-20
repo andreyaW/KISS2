@@ -3,10 +3,18 @@ import numpy as np
 
 from component_objects.component_exponential import ExponentialComponent
 from component_objects.component_weibull import WeibullComponent
-# Add more components here as needed
 
 # -----------------------------------------------------------------------------
-# PARAMETER SETS
+# Define fixtures (variables/functions available to each test)
+# -----------------------------------------------------------------------------
+
+@ pytest.fixture
+def comps(component_class, kwargs, n):
+    # Build components
+    return [ component_class(name=f"comp_{i}",**kwargs, MTTR=2) for i in range(n) ]
+
+# -----------------------------------------------------------------------------
+# Define parameters and parameter sets
 # -----------------------------------------------------------------------------
 @pytest.mark.parametrize("tolerance, component_class, kwargs", [
     # Exponential: uses only MTTF
@@ -18,32 +26,19 @@ from component_objects.component_weibull import WeibullComponent
     (0.03, WeibullComponent, {"shape": 1.0, "MTTF": 100}),  
     (0.03, WeibullComponent, {"shape": 1.0, "MTTF": 15}),
     (0.03, WeibullComponent, {"shape": 1.0, "MTTF": 250}),
-    # (0.10, WeibullComponent, {"shape": 0.5, "MTTF": 100}),
-    # (0.10, WeibullComponent, {"shape": 2.0, "MTTF": 100}),
 ])
+@pytest.mark.parametrize("run", range(3))   # number of times to run each parameter set
+@pytest.mark.parametrize("n", [10000])       # number of comps per test run
 
-
-@pytest.mark.parametrize("run", range(3))
-@pytest.mark.parametrize("n", [5000])
-def test_sample_failure_time(tolerance, component_class, kwargs, run, n):
+def test_sample_failure_time(tolerance, component_class, kwargs, run, n, comps):
     """
     Generic test that verifies the empirical MTTF of any component class.
     """
     # Extract the target MTTF
     target_MTTF = kwargs["MTTF"]
 
-    # Build components
-    comps = [
-        component_class(
-            name=f"comp_{i}",
-            **kwargs,
-            MTTR=2,
-        )
-        for i in range(n)
-    ]
-
     # Collect failure times
-    failure_times = np.array([c.time_to_failure for c in comps])
+    failure_times = np.array([c.time_to_failure for c in comps])    # uses the comps fixture
     mean_failure_time = failure_times.mean()
 
     # Allow ±3% tolerance
