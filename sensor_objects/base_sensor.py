@@ -38,9 +38,9 @@ class BaseSensor(ABC):
         num_steps = int(t_end // dt)
         for step_idx in range(num_steps):
             t = step_idx * dt
-            # ensure the attached object updates before reading
-            if hasattr(self.attached_object, 'step'):
-                self.attached_object.step(dt)
+            # # ensure the attached object updates before reading
+            # if hasattr(self.attached_object, 'step'):
+            #     self.attached_object.step(dt)
             self.step(t)
 
     # -------------------------------------------------------------------------
