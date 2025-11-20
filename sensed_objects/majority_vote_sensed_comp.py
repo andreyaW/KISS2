@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from sensed_objects.base_sensed_comp import BaseSensedComponent
 import numpy as np
+import pandas as pd
 
 @dataclass
 class MajorityVoteSensedComp(BaseSensedComponent):
@@ -21,6 +22,12 @@ class MajorityVoteSensedComp(BaseSensedComponent):
         fused_state = unique_vals[np.argmax(counts)]
 
         return fused_state
+    
+    def __post_init__(self):
+        "Defining the all states array to hold comp true and sensed states and true states and readings from all sensors"
+        column_names = ['t', self.comp.name+' true state at time t', self.comp.name+' sensed state at time t'] + [sensor.name+' reading for time t' for sensor in self.sensors] + [sensor.name+' true state at time t' for sensor in self.sensors]
+        
+        self.all_states = pd.DataFrame(columns=column_names)
 
     # -------------------------------------------------------------------------
     # OPTIONAL: REPR

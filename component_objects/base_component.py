@@ -65,4 +65,5 @@ class BaseComponent(BasicObject, ABC):
     def repair(self):
         """Repair the component and reset failure time.
         DEFAULT: repair time is sampled from lognormal distribution."""
-        pass  # IMPLEMENT REPAIR LOGIC HERE
+        
+        pass # IMPLEMENT REPAIR LOGIC HERE

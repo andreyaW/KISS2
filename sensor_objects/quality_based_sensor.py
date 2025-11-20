@@ -10,6 +10,8 @@ class QualityBasedSensor(BaseSensor):
         self.observation_probs = self.set_observation_probs()
 
     def set_observation_probs(self, comp_model='two_state') -> np.ndarray:
+        
+        # determine the probability the sensor gets a correct reading
         if isinstance(self.quality, (float, int)):
             prob_correct = float(self.quality)
         else:
@@ -23,15 +25,8 @@ class QualityBasedSensor(BaseSensor):
             else:
                 raise ValueError(f"Unknown sensor quality: {self.quality}")
 
-        if comp_model == 'three_state':
-            prob_incorrect = (1 - prob_correct) / 2
-            obs = np.array([
-                [prob_correct, prob_incorrect, prob_incorrect],
-                [prob_incorrect, prob_correct, prob_incorrect],
-                [prob_incorrect, prob_incorrect, prob_correct],
-            ])
-        else:
             prob_incorrect = (1 - prob_correct)
+            
             obs = np.array([
                 [prob_correct, prob_incorrect],
                 [prob_incorrect, prob_correct],
