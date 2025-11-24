@@ -30,7 +30,7 @@ class BaseSensedComponent(ABC):
         # step the component and it's sensors
         self.comp.step(dt)
         for sensor in self.sensors:
-            sensor.step(t)
+            sensor.step(t, self.comp.state)
         
         # use child class logic to fuse readings from multiple sensors
         fused_state = self.fuse_sensor_readings(t)
@@ -63,7 +63,12 @@ class BaseSensedComponent(ABC):
             self.step(t, dt)
 
     def plot_history(self):
-        
         plt.plot(self.history[:,0], self.history[:,1])        
         plt.plot(self.sensed_history[:,0], self.sensed_history[:,1], '--', color = 'orange')
 
+
+    # -------------------------------------------------------------------------
+    # COMMONLY NEEDED METHODS
+    # -------------------------------------------------------------------------
+    def simulated_sensing_accuracy(self):
+        return sum(self.sensed_history[:,1] == self.comp.history[1:,1])/len(self.sensed_history[:,1])
