@@ -8,7 +8,7 @@ from sensed_objects.kooN_vote_sensed_comp import KooNVoteSensedComp
 
 
 # -----------------------------------------------------------------------------
-# Helper: Closed-form K-of-N correctness probability
+# HELPER FUNCTION: Closed-form K-of-N correctness probability
 # -----------------------------------------------------------------------------
 def expected_kooN_fusion_correctness(N: int, K: int, p: float) -> float:
     """Compute probability that K-of-N fusion is correct when sensors are iid."""
@@ -25,7 +25,7 @@ def expected_kooN_fusion_correctness(N: int, K: int, p: float) -> float:
 
 
 # -----------------------------------------------------------------------------
-# Define fixtures (variables/functions available to each test)
+# FIXTURES : variables/functions available to each test
 # -----------------------------------------------------------------------------
 @pytest.fixture
 def num_comps():
@@ -73,7 +73,7 @@ def kooN_sensedComps(num_comps):
 
 
 # -----------------------------------------------------------------------------
-# Define parameters and parameter sets
+# PARAMETERS AND PARAMETER SETS
 # -----------------------------------------------------------------------------
 @pytest.mark.parametrize("quality, k", [
                         ("Good", 1), 
@@ -97,10 +97,8 @@ def test_kooN_sensed_comp(k, quality,
     """
     Monte-Carlo test:
     Simulate `num_comps` independent components with 3 sensors each.
-    Fuse them using K-of-N logic.
+    Fuse sensor readings using K-of-N logic.
     Compare the average simulated correctness to the analytic expectation.
-
-    This test uses pre-generated components (via fixture) for speed.
     """
 
     # Retrieve prebuilt objects
@@ -134,5 +132,4 @@ def test_kooN_sensed_comp(k, quality,
 
 
 # def test_majority_vote_comp():
-    
 #     """ determine that a majority vote component has the same result as a kooN comp where k= int(N/2)+1"""

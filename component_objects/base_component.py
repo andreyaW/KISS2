@@ -14,31 +14,48 @@ class BaseComponent(BasicObject, ABC):
     state: int = field(default=1, init=False)
     time_to_failure: float = field(init=False)
     current_time: float = field(default=0.0, init=False)
-    history: np.ndarray = field(init=False)
-
-    def __post_init__(self):
-        if self.MTTF <= 0:
-            raise ValueError(f"{self.name}: MTTF must be positive.")
-
-        self.reset_failure_time()
-
-        # Initialize history as an array with the initial state
-        self.history = np.array([[0.0, self.state]], dtype=float)
+    history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
 
     # ----------------------------------------------------------------------
+    # ABSTRACT METHODS: ALL SUBCLASSES MUST HAVE THESE IMPLEMENTED
+    # ----------------------------------------------------------------------
+    @abstractmethod
+    def R_t(self, t) -> float:
+        "Suvivor Function: returns the reliability of the component at a desired time t"
+        raise NotImplementedError
+    
+    @abstractmethod    
+    def z_t(self,t):
+        """Failure Rate Function: returns the failure rate of the component at a desired time t"""
+        pass
+    
+    @abstractmethod
+    def f_t(self, t):
+        """Probability Density Function (pdf): The distribution of failure times based on the model type"""
+        pass
+    
     @abstractmethod
     def sample_failure_time(self) -> float:
+        """ Returns a single failure time for a component using numpy random """
         raise NotImplementedError
-
+    
     @abstractmethod
     def __repr__(self):
         raise NotImplementedError
 
     # ----------------------------------------------------------------------
-    def reset_failure_time(self):
+    # COMMON METHODS: ALL SUBCLASSES INHERIT THESE FUNCTIONS
+    # ----------------------------------------------------------------------
+    
+    def __post_init__(self):
+        if self.MTTF <= 0:
+            raise ValueError(f"{self.name}: MTTF must be positive.")
+
         self.state = 1
         self.current_time = 0.0
-        self.time_to_failure = self.sample_failure_time()
+        
+        # Initialize history as an array with the initial state
+        self.history = np.array([[0.0, self.state]], dtype=float)
 
     # ----------------------------------------------------------------------
     def step(self, dt: float = 1.0):
@@ -59,7 +76,13 @@ class BaseComponent(BasicObject, ABC):
             self.step(dt)
             t += dt
 
+
     # ----------------------------------------------------------------------
-    def repair(self):
-        """Optional: implement repair logic later."""
-        pass
+    # def repair(self):
+    #     """Optional: implement repair logic later."""
+    #     pass
+
+    # def reset_failure_time(self):
+    #     self.state = 1
+    #     self.current_time = 0.0
+    #     self.time_to_failure = self.sample_failure_time()

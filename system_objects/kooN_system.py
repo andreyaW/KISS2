@@ -22,3 +22,8 @@ class KOutOfNSystem(BaseSystem):
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name}, state={self.state}, num_components={len(self.components)})"
+    
+    def TTF(self):
+        comp_TTFs = [c.time_to_failure for c in self.comps]
+        comp_TTFs = sorted(comp_TTFs, reverse=True)
+        return comp_TTFs[self.k-1]

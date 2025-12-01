@@ -19,4 +19,9 @@ class SeriesSystem(BaseSystem):
         return 0  # "failed"
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, num_components={len(self.components)})"
+        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, num_components={len(self.components)})"        
+    
+    
+    def TTF(self):
+        comp_TTFs = [c.time_to_failure for c in self.comps]
+        return min(comp_TTFs)

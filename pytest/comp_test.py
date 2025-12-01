@@ -23,10 +23,10 @@ def comps(component_class, kwargs, n):
     # Build components
     return [component_class(name=f"comp_{i}", **kwargs, MTTR=2) for i in range(n)]
 
-
 # -----------------------------------------------------------------------------
-# TEST FUNCTION 1: SAMPLE FAILURE TIME TEST
+# PARAMETERS AND PARAMETER SETS
 # -----------------------------------------------------------------------------
+@pytest.mark.parametrize("run", range(3))   # number of times to run each parameter set
 @pytest.mark.parametrize("component_class, kwargs", [
     # Exponential: uses only MTTF
     (ExponentialComponent, {"MTTF": 10}),
@@ -38,7 +38,10 @@ def comps(component_class, kwargs, n):
     (WeibullComponent, {"shape": 1.0, "MTTF": 15}),
     (WeibullComponent, {"shape": 1.0, "MTTF": 250}),
 ])
-@pytest.mark.parametrize("run", range(3))   # number of times to run each parameter set
+
+# -----------------------------------------------------------------------------
+# TEST FUNCTION 1: SAMPLE FAILURE TIME TEST
+# -----------------------------------------------------------------------------
 def test_sample_failure_time(tolerance, component_class, kwargs, run, comps):
     """
     Generic test that verifies the empirical MTTF of any component class.
