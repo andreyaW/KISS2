@@ -26,3 +26,21 @@ class ParallelSystem(BaseSystem):
     def TTF(self):  
         comp_TTFs = [c.time_to_failure for c in self.comps]
         return max(comp_TTFs)
+    
+# import sympy as sp
+
+# def parallel_R(f_list, R_list):
+#     t = sp.Symbol("t", positive=True)
+#     return 1 - sp.prod([1 - Ri for Ri in R_list])
+
+# def parallel_f(f_list, R_list):
+#     t = sp.Symbol("t", positive=True)
+#     n = len(f_list)
+
+#     return sum(
+#         f_list[i] * sp.prod([1 - R_list[j] for j in range(n) if j != i])
+#         for i in range(n)
+#     )
+
+# def parallel_z(f_list, R_list):
+#     return sp.simplify(parallel_f(f_list, R_list) / parallel_R(f_list, R_list))
