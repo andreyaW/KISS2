@@ -5,8 +5,11 @@ Implements a parallel system model.
 """
 
 from system_objects.base_system import BaseSystem
-
 from dataclasses import dataclass
+from utilities import is_numeric
+
+import numpy as np
+import sympy as sp
 
 @dataclass
 class ParallelSystem(BaseSystem):
@@ -27,20 +30,18 @@ class ParallelSystem(BaseSystem):
         comp_TTFs = [c.time_to_failure for c in self.comps]
         return max(comp_TTFs)
     
-# import sympy as sp
+    
+    def R_s(self, t):
+        t_sym = sp.symbols("t", positive=True)
 
-# def parallel_R(f_list, R_list):
-#     t = sp.Symbol("t", positive=True)
-#     return 1 - sp.prod([1 - Ri for Ri in R_list])
+        # --- symbolic case ---
+        if t is None or isinstance(t, sp.Symbol):
+            Rs = [c.R_t(t_sym) for c in self.components]   # SymPy expressions
+            R_sym = 1 - sp.prod([1 - Ri for Ri in Rs])
+            return sp.simplify(R_sym)
 
-# def parallel_f(f_list, R_list):
-#     t = sp.Symbol("t", positive=True)
-#     n = len(f_list)
-
-#     return sum(
-#         f_list[i] * sp.prod([1 - R_list[j] for j in range(n) if j != i])
-#         for i in range(n)
-#     )
-
-# def parallel_z(f_list, R_list):
-#     return sp.simplify(parallel_f(f_list, R_list) / parallel_R(f_list, R_list))
+        # --- numeric case ---
+        # First build symbolic expression
+        R_sym = self.R_s(None)
+        R_num = sp.lambdify(t_sym, R_sym, "numpy")
+        return R_num(t)
