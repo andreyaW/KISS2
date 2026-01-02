@@ -9,7 +9,7 @@ from system_objects.parallel_system import ParallelSystem
 from system_objects.kooN_system import KOutOfNSystem
 
 # -----------------------------------------------------------------------------
-# HELPER FUNCTION: Closed-form K-of-N correctness probability
+# HELPER FUNCTION: 
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
