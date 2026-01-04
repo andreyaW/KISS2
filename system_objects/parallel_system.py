@@ -13,8 +13,7 @@ import sympy as sp
 
 @dataclass
 class ParallelSystem(BaseSystem):
-    """A system where components are arranged in parallel."""
-    # self.parallels : List[tuple] = []
+    """A system/subsystem where all components are arranged in parallel."""
 
     def structure_function(self) -> int:
         """Determine overall system state based on component states."""

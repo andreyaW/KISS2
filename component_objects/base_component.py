@@ -76,11 +76,13 @@ class BaseComponent(BasicObject, ABC):
             self.step(dt)
             t += dt
 
-
     # ----------------------------------------------------------------------
-    # def repair(self):
-    #     """Optional: implement repair logic later."""
-    #     pass
+    def repair(self):
+        """Optional: implement repair logic later."""
+        #sample repair time based on MTTF
+        repair_time = np.random()
+        
+        pass
 
     # def reset_failure_time(self):
     #     self.state = 1
