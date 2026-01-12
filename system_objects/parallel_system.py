@@ -30,7 +30,7 @@ class ParallelSystem(BaseSystem):
         return max(comp_TTFs)
     
     
-    def R_s(self, t):
+    def R_s(self, t=None):
         t_sym = sp.symbols("t", positive=True)
 
         # --- symbolic case ---
@@ -44,3 +44,15 @@ class ParallelSystem(BaseSystem):
         R_sym = self.R_s(None)
         R_num = sp.lambdify(t_sym, R_sym, "numpy")
         return R_num(t)
+    
+    
+    # -------------------------------------------------------------------------
+    # REPAIR
+    # -------------------------------------------------------------------------
+    def repair(self):
+        repair_times = np.zeros(len(self.components))
+        for i,comp in enumerate(self.components):
+            repair_times[i]= comp.repair()         
+        repair_times.sort()
+        sys_repair_time = max(repair_times)
+        return sys_repair_time, repair_times

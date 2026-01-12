@@ -39,7 +39,7 @@ def component_factory():
                         MTTR=1
                     )
                 )
-
+                
         return comps
 
     return __factory__
@@ -62,155 +62,136 @@ def system_factory(component_factory):
 @pytest.fixture
 def expected_parallel():
     """
-    Returns analytic R_s(t), f_s(t), z_s(t), and MTTF_s
-    for a series system of exponential components.
+    Returns analytic R_s(t), f_s(t), z_s(t)
+    for a parallel system.
+
+    MTTF intentionally omitted to avoid symbolic integration blow-ups.
     """
     def __factory__(dist_type, params):
         t = sp.Symbol("t", real=True, positive=True)
 
-        # ----- exponential series -----
+        # ======================================================
+        # PARALLEL EXPONENTIAL
+        # ======================================================
         if dist_type == "exp":
-            lambdas = np.array([1/p for p in params])
-            z_s = lambdas.sum()
+            lambdas = [1 / MTTF for MTTF in params]
 
-            R_s_t = sp.exp(-z_s * t)
-            f_s_t = z_s * sp.exp(-z_s * t)
-            z_s_t = z_s
-            MTTF_s = 1.0 / z_s
+            product_term = sp.Integer(1)
+            for lam in lambdas:
+                product_term *= (1 - sp.exp(-lam * t))
 
-            return R_s_t, f_s_t, z_s_t, float(MTTF_s)
-        
-        elif dist_type =="weibull":
-            
-            pass
-            raise NotImplementedError("Add Weibull analytic solution later.")
+            R_s_t = sp.simplify(1 - product_term)
+            f_s_t = sp.diff(1 - R_s_t, t)
+            z_s_t = sp.simplify(f_s_t / R_s_t)
+
+            return R_s_t, f_s_t, z_s_t
+
+        # ======================================================
+        # PARALLEL WEIBULL (COMMON SHAPE)
+        # ======================================================
+        elif dist_type == "weib":
+            mttfs = [p[0] for p in params]
+            shapes = [p[1] for p in params]
+
+            if len(set(shapes)) != 1:
+                raise NotImplementedError(
+                    "Parallel Weibull analytic form requires identical shape"
+                )
+
+            k = shapes[0]
+
+            thetas = [
+                mttf / sp.gamma(1 + 1 / k)
+                for mttf in mttfs
+            ]
+
+            product_term = sp.Integer(1)
+            for theta in thetas:
+                product_term *= (1 - sp.exp(-(t / theta) ** k))
+
+            R_s_t = sp.simplify(1 - product_term)
+            f_s_t = sp.diff(1 - R_s_t, t)
+            z_s_t = sp.simplify(f_s_t / R_s_t)
+
+            return R_s_t, f_s_t, z_s_t
+
+        else:
+            raise ValueError(f"Unknown dist_type: {dist_type}")
 
     return __factory__
 
 
 # =============================================================================
+#  PARALLEL SYSTEM TEST
+# check that the solution for exponential components in series matches analytical solution
+# for i=1,2...n : Rs(t) = 1-∏_i(1-(e^λ_i*t)
+# =============================================================================
 # PARAMETERS
 # =============================================================================
 @pytest.mark.parametrize(
-    "dist_type, kwargs",
+    "dist_type, params, time_scale",
     [
-        ("exp", [10, 10, 10]),
-        ("exp", [100, 100, 100]),
-        ("exp", [50, 50, 50]),
-        
+        # -------------------------
+        # Exponential systems
+        # -------------------------
+        ("exp", [10.0, 20.0], 10),
+        ("exp", [5.0, 10.0, 20.0], 8),
+        ("exp", [8.0, 15.0, 30.0, 60.0], 6),
+
+        # -------------------------
+        # Weibull systems (common shape)
+        # -------------------------
+        ("weib", [(10.0, 1.5), (20.0, 1.5)], 10),
+        ("weib", [(5.0, 2.0), (10.0, 2.0), (20.0, 2.0)], 8),
+        ("weib", [(8.0, 1.2), (15.0, 1.2), (30.0, 1.2), (60.0, 1.2)], 6),
     ]
 )
-# =============================================================================
-# TEST
-# =============================================================================
-def test_series_system_exponential(dist_type, kwargs, system_factory, expected_series):
+
+def test_parallel_system_general(
+    dist_type,
+    params,
+    time_scale,
+    component_factory,
+    expected_parallel
+):
     """
-    Monte-Carlo validation of system R(t), f(t), hazard z(t), MTTF.
-    Also plots analytic vs simulated curves.
-    """
-
-    # -------- build systems --------
-    N = 10000
-    systems = system_factory(dist_type, kwargs, n=N)
-
-    # -------- grab simulated system TTFs --------
-    TTFs = np.array([sys.TTF() for sys in systems])
-    
-    # -------- analytic targets --------
-    R_s_sym, f_s_sym, z_s_scalar, MTTF_analytical = expected_series(dist_type, kwargs)
-    t_sym = list(R_s_sym.free_symbols)[0]
-
-    time_points = np.linspace(0, np.max(TTFs), int(np.ceil(np.max(TTFs)/0.1)) + 1)
-
-    R_analytic = np.array([float(R_s_sym.subs(t_sym, t)) for t in time_points])
-    f_analytic = np.array([float(f_s_sym.subs(t_sym, t)) for t in time_points])
-    z_analytic = np.full_like(time_points, z_s_scalar)
-
-    # -------- Monte-Carlo R(t) --------
-    R_sim = np.array([np.mean(TTFs > t) for t in time_points])
-
-    # -------- Monte-Carlo MTTF --------
-    MTTF_sim = TTFs.mean()
-
-    # -------- Monte-Carlo f(t) (from KDE) --------
-    kde = gaussian_kde(TTFs, bw_method=0.1)
-    f_sim2 = kde(time_points)
-    
-    # -------- z(t) = f/R (from KDE)--------    
-    n_samples = len(TTFs)          # number of observed TTFs
-    rel_eps = max(1e-6, 1.0 / n_samples)   # or 0.01 if you need more aggressive floor
-
-    z_sim2 = f_sim2 / np.maximum(R_sim, rel_eps)
-    
-    """
-    # -------- Monte-Carlo f(t) (from histogram method) --------
-    # compute bin edges from centers (works for uniform or nonuniform spacing)
-    dt_left = time_points[1:] - time_points[:-1]
-    # internal half-steps
-    left_edges = time_points[:-1] - dt_left/2
-    right_edges = time_points[1:] + dt_left/2
-    # simpler robust approach:
-    # Create edges as midpoints between consecutive centers, and extend ends
-    midpoints = 0.5 * (time_points[:-1] + time_points[1:])
-    edges = np.empty(len(time_points) + 1)
-    edges[1:-1] = midpoints
-    edges[0]      = time_points[0] - (midpoints[0] - time_points[0])
-    edges[-1]     = time_points[-1] + (time_points[-1] - midpoints[-1])
-
-    hist_counts, bin_edges = np.histogram(TTFs, bins=edges, density=True)
-    
-    # hist_counts now has length len(time_points) and corresponds to these centers
-    f_sim = hist_counts
-    t_centers = 0.5*(bin_edges[:-1] + bin_edges[1:])  # should equal time_points
-
-    # -------- Monte-Carlo z(t) = f/R (from histogram method)--------
-    eps = 1e-10 #(prevent divide by zero error)
-    z_sim = f_sim / np.maximum(R_sim, eps)
-    
-    # check if time_points and t_centers are the same
-    assert np.allclose(t_centers, time_points, rtol=1e-12, atol=1e-16), \
-        "t_centers do not match time_points!"
-        
+    Verify analytic reliability of an N-component parallel system
+    for exponential or Weibull components.
     """
 
-    # -------------------------------------------------------------------------
-    # OPTIONAL PLOTTING
-    # -------------------------------------------------------------------------
-    plt.figure(figsize=(12,10))
+    t = sp.Symbol("t", real=True, positive=True)
 
-    plt.subplot(3,1,1)
-    plt.plot(time_points, R_analytic,"k", label="Analytic R(t)")
-    plt.plot(time_points, R_sim, "o", markersize=3, label="Simulated R(t)")
-    plt.axvline(x=MTTF_sim, color='black', linestyle='--', linewidth=2, label=r"MTTF$_{simulated}$ " + f"={MTTF_sim:.3f}")
-    plt.axvline(x=MTTF_analytical, color='green', linestyle='--', linewidth=2, label=r"MTTF$_{analytical}$ " + f"={MTTF_analytical:.3f}")
-    plt.legend()
-    plt.title("Reliability R(t)")
+    # Build components
+    components = component_factory(dist_type, params)
+    system = ParallelSystem("ParallelSys", components)
 
-    plt.subplot(3,1,2)
-    plt.plot(time_points, f_analytic, "k", label="Analytic f(t)")
-    # plt.plot(time_points, f_sim, "bo", markersize=3, label="Simulated f(t) (histogram method)")
-    plt.plot(time_points, f_sim2, "rs", markersize=3, label="Simulated f(t) (KDE)")
-    plt.axvline(x=MTTF_sim, color='black', linestyle='--', linewidth=2, label=r"MTTF$_{simulated}$ " + f"={MTTF_sim:.3f}")
-    plt.axvline(x=MTTF_analytical, color='green', linestyle='--', linewidth=2, label=r"MTTF$_{analytical}$ " + f"={MTTF_analytical:.3f}")
-    plt.legend()
-    plt.title("PDF f(t)")
+    # Analytic target
+    R_expected, _, _ = expected_parallel(dist_type, params)
 
-    plt.subplot(3,1,3)
-    plt.plot(time_points, z_analytic,"k", label="Analytic hazard z(t)")
-    # plt.plot(time_points, z_sim, "bo", markersize=3, label="Simulated hazard z(t) (histogram method)")
-    plt.plot(time_points, z_sim2, "rs", markersize=3, label="Simulated hazard z(t) (KDE)")
-    plt.axvline(x=MTTF_sim, color='black', linestyle='--', linewidth=2, label=r"MTTF$_{simulated}$ " + f"={MTTF_sim:.3f}")
-    plt.axvline(x=MTTF_analytical, color='green', linestyle='--', linewidth=2, label=r"MTTF$_{analytical}$ " + f"={MTTF_analytical:.3f}")
-    plt.legend()
-    plt.title("Hazard z(t)")
-    plt.tight_layout()
-    plt.show()
+    # System result
+    R_system = sp.simplify(system.R_s())
 
-    print("\nAnalytic MTTF:", MTTF_analytical)
-    print("Simulated MTTF:", MTTF_sim)
-    
-    # check the MTTF is reasonably close to expectation 1% difference
-    assert(np.isclose(MTTF_sim, MTTF_analytical, rtol=MTTF_analytical*0.01))
+    # -------------------------------------------------
+    # Symbolic equivalence
+    assert sp.simplify(R_system - R_expected) < 1e-1
 
-# def test_series_system_weibull(dist_type, kwargs, system_factory, expected_series):
-#     pass
+    # -------------------------------------------------
+    # Numeric sanity check
+    # -------------------------------------------------
+    f_expected = sp.lambdify(t, R_expected, "numpy")
+    f_system = sp.lambdify(t, R_system, "numpy")
+
+    # Choose reasonable time grid
+    if dist_type == "exp":
+        t_max = time_scale * min(params)
+    else:
+        t_max = time_scale * min(mttf for mttf, _ in params)
+
+    time_grid = np.linspace(0, t_max, 50)
+
+    assert np.allclose(
+        f_expected(time_grid),
+        f_system(time_grid),
+        rtol=1e-12,
+        atol=1e-14
+    )

@@ -63,3 +63,15 @@ class KOutOfNSystem(BaseSystem):
         R_sym = self.R_s(None)
         R_num = sp.lambdify(t_sym, R_sym, "numpy")
         return R_num(t)
+
+
+    # -------------------------------------------------------------------------
+    # REPAIR
+    # -------------------------------------------------------------------------
+    def repair(self):
+        repair_times = np.zeros(len(self.components))
+        for i,comp in enumerate(self.components):
+            repair_times[i]= comp.repair()         
+        repair_times.sort()
+        sys_repair_time = repair_times[self.k-1]
+        return sys_repair_time, repair_times

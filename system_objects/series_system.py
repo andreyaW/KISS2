@@ -7,6 +7,7 @@ Implements a series system model.
 from system_objects.base_system import BaseSystem
 from dataclasses import dataclass
 
+import numpy as np
 import sympy as sp
 
 @dataclass
@@ -48,42 +49,14 @@ class SeriesSystem(BaseSystem):
 
         R_num = sp.lambdify(t_sym, R_sym, "numpy")
         return R_num(t)
-    
-    def z_s(self, t=None):
-        """
-        System hazard function z_s(t).
-        Returns symbolic expression if t=None, else numeric values.
-        """
-        t_sym = sp.symbols("t", positive=True)
 
-        # symbolic
-        if t is None or isinstance(t, sp.Symbol):
-            z_sym = sp.Integer(0)
-            for c in self.components:
-                z_sym += c.z_t(t_sym)
-            return sp.simplify(z_sym)
-
-        # numeric
-        z_sym = sp.Integer(0)
-        for c in self.components:
-            z_sym += c.z_t(t_sym)
-
-        z_num = sp.lambdify(t_sym, z_sym, "numpy")
-        return z_num(t)
-
-    def f_s(self, t=None):
-        """
-        System PDF f_s(t).
-        """
-        t_sym = sp.symbols("t", positive=True)
-
-        R_sym = self.R_s(t_sym)
-        z_sym = self.z_s(t_sym)
-
-        if t is None or isinstance(t, sp.Symbol):
-            return sp.simplify(z_sym * R_sym)
-
-        f_num = sp.lambdify(t_sym, z_sym * R_sym, "numpy")
-        return f_num(t)
-
-
+    # -------------------------------------------------------------------------
+    # REPAIR
+    # -------------------------------------------------------------------------
+    def repair(self):
+        repair_times = np.zeros(len(self.components))
+        for i,comp in enumerate(self.components):
+            repair_times[i]= comp.repair()         
+        repair_times.sort()
+        sys_repair_time = min(repair_times)
+        return sys_repair_time, repair_times

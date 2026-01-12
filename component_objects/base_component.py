@@ -13,8 +13,10 @@ class BaseComponent(BasicObject, ABC):
 
     state: int = field(default=1, init=False)
     time_to_failure: float = field(init=False)
+    dt = 1.0                                    # time step for simulation/ repair
     current_time: float = field(default=0.0, init=False)
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
+    repairable: bool = field(default=False, init=False)
 
     # ----------------------------------------------------------------------
     # ABSTRACT METHODS: ALL SUBCLASSES MUST HAVE THESE IMPLEMENTED
@@ -69,21 +71,54 @@ class BaseComponent(BasicObject, ABC):
         self.history = np.vstack([self.history, new_row])
 
     # ----------------------------------------------------------------------
-    def simulate(self, t_end: float, dt: float = 1.0):
+    def simulate(self, t_end: float, dt: float = 1.0, repairable: bool = False):
         """Run full simulation."""
         t = 0.0
-        while t < t_end:
+        self.dt = dt
+        while len(self.history) < t_end / dt + 1:
             self.step(dt)
+            
+            if repairable and self.state == 0:
+                self.repairable = True
+                self.repair()
+            
             t += dt
 
     # ----------------------------------------------------------------------
-    def repair(self):
-        """Optional: implement repair logic later."""
-        #sample repair time based on MTTF
-        repair_time = np.random()
+    def repair(self, cv: float = 0.25, min_time: float = 5.0):
+        """ Sample repair time from lognormal distribution and update state history. 
+        (Repair State = -1), """
         
-        pass
+        # sample repair time from lognormal distribution
+        def __sample_repair_time(self, cv, min_time) -> float:
+            sigma = np.sqrt(np.log(1.0 + cv**2))
+            mu = np.log(self.MTTR) - 0.5 * sigma**2
 
+            return max(
+                np.random.lognormal(mu, sigma),
+                min_time
+            )
+        
+        repair_time = __sample_repair_time(self, cv, min_time)
+        self.current_time += repair_time
+        
+        time_array = np.arange(
+            self.history[-1, 0] + self.dt,
+            self.current_time + self.dt,
+            self.dt
+        )
+        self.history = np.vstack([self.history, np.column_stack([time_array, np.ones_like(time_array)*-1])])
+        self.state = 1
+        self.time_to_failure = self.sample_failure_time()
+
+
+    def plot_history(self, ax=None):
+        """Plot the history of the component's state over time."""
+        ax = super().plot_history(ax)
+        
+        if self.repairable: 
+            ax.set_ylim(-1.1, 1.1)
+            
     # def reset_failure_time(self):
     #     self.state = 1
     #     self.current_time = 0.0

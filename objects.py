@@ -83,13 +83,25 @@ class BasicObject(ABC):
         self.history = np.append(self.history, new_history, axis=0) # Append new history records
         BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
 
-    def plot_history(self):
+    def plot_history(self, ax=None):
         """Plot the history of the object's state over time."""
+        if ax is None:
+            ax = plt.gca()
+    
         times = self.history[:, 0]
         states = self.history[:, 1]
-        plt.plot(times, states, label=self.name, linestyle ='--') #drawstyle='steps-post',
-        plt.title(f"State History of {self.name.title()}")
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.ylim(-0.1, 1.1)
-        plt.grid()
+        ax.plot(times, states, label=self.name, linestyle ='--') #drawstyle='steps-post',
+        ax.set_title(f"State History of {self.name.title()}")
+        plt.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.05, 1),
+            fancybox=True,
+            shadow=True
+        )
+        ax.set_xlabel("Time")
+        ax.set_ylabel("State")
+        ax.set_ylim(0.1, 1.1)
+        ax.grid()
+        
+        return ax
+        

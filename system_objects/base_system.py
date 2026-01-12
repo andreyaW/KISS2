@@ -16,8 +16,8 @@ from utilities import is_numeric
 
 import numpy as np
 import sympy as sp
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 @dataclass
 class BaseSystem(BasicObject, ABC):
@@ -97,34 +97,28 @@ class BaseSystem(BasicObject, ABC):
 
         return self.state
 
+    # Simulation loop
     def simulate(self, t_end: float, dt: float = 1.0):
-        """
-        Run simulation from t=0 to t_end with steps of dt.
-        Mirrors BaseComponent.simulate().
-        """
-        self.current_time = 0.0
-        self.state = 1
-        self.history = np.array([[0.0, 1]], dtype=float)
-
-        # reset component histories to match new run
-        for comp in self.components:
-            comp.current_time = 0.0
-            comp.history = np.array([[0.0, comp.state]], dtype=float)
-
-        # ---- simulation loop ----
         t = 0.0
         while t < t_end:
             self.step(dt)
             t += dt
 
-        # After simulation, build combined pandas history
+        # After simulation, build combined history DataFrame
         self._build_all_histories()
-
+        
+        # for the subsystems, also build their histories
+        for comp in self.components:
+            if hasattr(comp, "_build_all_histories"):
+                comp._build_all_histories()
+    
+    
     def _build_all_histories(self):
         """
         Combine system and component histories into a single DataFrame:
         columns = time, <system>, <component1>, ...
         """
+
         times = self.history[:, 0]
         df = pd.DataFrame({"time": times, self.name: self.history[:, 1]})
 
@@ -136,7 +130,7 @@ class BaseSystem(BasicObject, ABC):
         self.all_histories = df
 
     # -------------------------------------------------------------------------
-    # COMMON RELIABILITY FUNCTIONS FOR ALL SYSTEMS
+    # RELIABILITY MODELING
     # -------------------------------------------------------------------------
     def f_s(self, t=None):
         """
@@ -173,49 +167,51 @@ class BaseSystem(BasicObject, ABC):
 
         # --- numeric ---
         if is_numeric(t):
+            eps = 1e-30
             f = self.f_s(t)
             R = self.R_s(t)
-            return f / R
+            return f / np.maximum(R, eps)
 
         raise TypeError("t must be None, float, or numpy array")
     
     def MTTF_s(self):
         """
-        Symbolic MTTF = ∫₀^∞ R_s(t) dt
+        MTTF = ∫₀^∞ R_s(t) dt
         """
         ts = sp.symbols("t", positive=True)
-        R_expr = self.R_s(None)
+        R_expr = self.R_s(ts)
         return sp.integrate(R_expr, (ts, 0, sp.oo))
 
     # -------------------------------------------------------------------------
     # PLOTTING
     # -------------------------------------------------------------------------
-    def plot_history(self, plot_comps: bool = False):
+    def plot_history(self, ax=None, plot_comps: bool = False):
         """
         Plot system and optionally component histories.
         """
+        if ax is None:
+            ax = plt.gca()
+        
         if self.all_histories is None:
             raise ValueError("Run simulate() before plotting.")
 
         df = self.all_histories
+        
+        # plot system
+        ax.plot(df["time"], df[self.name], "--k", lw=2, label=self.name)
 
         # plot components
         if plot_comps:
             for col in df.columns[2:]:
-                plt.plot(df["time"], df[col], label=col)
-
-        # plot system
-        plt.plot(df["time"], df[self.name], "--k", lw=2, label=self.name)
-
-        plt.title(f"{self.name} State History")
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.legend(
+                ax.plot(df["time"], df[col], ":",label=col)   
+        ax.legend(
             loc="upper left",
             bbox_to_anchor=(1.05, 1),
             fancybox=True,
             shadow=True
         )
-        plt.tight_layout()
-        plt.show()
-        
+        ax.set_title(f"{self.name} State History")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("State")
+
+               
