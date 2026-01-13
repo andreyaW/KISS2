@@ -51,9 +51,8 @@ class BasicObject(ABC):
     def __repr__(self):
         """Return string representation of the object."""
         pass
-
-
-    # COMMON METHODS = methods shared by all subclasses (inherited as-is)
+    
+    @abstractmethod
     def simulate(self, t_end: float, dt: float = 1.0):
         """
         Run a time-based simulation loop for a duration `t_end` with time step `dt`.
@@ -65,23 +64,46 @@ class BasicObject(ABC):
         dt : float
             Simulation step size. Determines numerical resolution.
         """
+        pass
 
-        # Calculate number of steps 
-        num_steps = int(t_end // dt)
+        # # Calculate number of steps 
+        # num_steps = int(t_end // dt)
 
-        # Initialize simulation
-        current_time = 0.0
-        self.history.append((current_time, self.state))
-        BasicObject.logger.info(f"Starting simulation for {self.name}: duration={t_end}, dt={dt}, steps={num_steps}")
+        # # Initialize simulation
+        # current_time = 0.0
+        # self.history.append((current_time, self.state))
+        # BasicObject.logger.info(f"Starting simulation for {self.name}: duration={t_end}, dt={dt}, steps={num_steps}")
 
-        # Main simulation loop
-        new_history = np.empty((num_steps, 2))  # Initialize empty history array
-        for i in range(1, num_steps + 1):
-            self.step(dt)
-            current_time += dt
-            new_history[i-1] = (current_time, self.state)
-        self.history = np.append(self.history, new_history, axis=0) # Append new history records
-        BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
+        # # Main simulation loop
+        # new_history = np.empty((num_steps, 2))  # Initialize empty history array
+        # for i in range(1, num_steps + 1):
+        #     self.step(dt)
+        #     current_time += dt
+        #     new_history[i-1] = (current_time, self.state)
+        # self.history = np.append(self.history, new_history, axis=0) # Append new history records
+        # BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
+
+    # COMMON METHODS = methods shared by all subclasses (inherited as-is)
+    def health_reset(self, repair_time: float):
+        """Reset the object's health/state to initial conditions."""
+        t_repair = 0.0
+        while t_repair < repair_time:
+            self.current_time += self.dt
+            t_repair += self.dt
+            self.history = np.vstack([
+                self.history,
+                [self.current_time, -1]
+            ])
+
+        # Reset for new life
+        self.state = 1
+        self.life_time = 0.0
+        self.time_to_failure = self.sample_failure_time()
+
+        self.history = np.vstack([
+            self.history,
+            [self.current_time, 1]
+        ])
 
     def plot_history(self, ax=None):
         """Plot the history of the object's state over time."""

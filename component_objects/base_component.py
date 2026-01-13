@@ -164,6 +164,8 @@ class BaseComponent(BasicObject, ABC):
 
     # ------------------------------------------------------------------
     def step(self, dt: float = 1.0):
+        """Advance time, update state, and append to history."""
+
         self.current_time += dt
 
         if self.state == 1:  # working
@@ -188,30 +190,25 @@ class BaseComponent(BasicObject, ABC):
             if repairable and self.state == 0:
                 self.repair()
 
-    # ------------------------------------------------------------------
-    def repair(self, cv: float = 0.25, min_time: float = 5.0):
+    # -------------------------------------------------------------------------
+    # REPAIR FUNCTION
+    # -------------------------------------------------------------------------
+    def sample_repair_time(self, cv: float = 0.25, min_time: float = 5.0) -> float:
         sigma = np.sqrt(np.log(1.0 + cv**2))
         mu = np.log(self.MTTR) - 0.5 * sigma**2
-        repair_time = max(np.random.lognormal(mu, sigma), min_time)
 
-        t_repair = 0.0
-        while t_repair < repair_time:
-            self.current_time += self.dt
-            t_repair += self.dt
-            self.history = np.vstack([
-                self.history,
-                [self.current_time, -1]
-            ])
+        return max(
+            np.random.lognormal(mu, sigma),
+            min_time
+        )
+    
+    def repair(self, cv: float = 0.25, min_time: float = 5.0):
+        """ Sample repair time from lognormal distribution and update state history. """
 
-        # Reset for new life
-        self.state = 1
-        self.life_time = 0.0
-        self.time_to_failure = self.sample_failure_time()
+        repair_time = self.sample_repair_time(cv, min_time)
+        super.health_reset(repair_time)
+        return repair_time
 
-        self.history = np.vstack([
-            self.history,
-            [self.current_time, 1]
-        ])
 
     def plot_history(self, ax=None):
         ax = super().plot_history(ax)
