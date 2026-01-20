@@ -9,7 +9,7 @@ from component_objects.component_weibull import WeibullComponent
 from system_objects.series_system import SeriesSystem
 
 # =============================================================================
-# FIXTURES
+# FIXTURES : variables/functions available to each test
 # =============================================================================
 @pytest.fixture
 def component_factory():
@@ -119,10 +119,13 @@ def expected_series():
     return __factory__
 
 # =============================================================================
-# EXPONENTIAL SERIES SYSTEM TEST
+# TESTS
 # =============================================================================
-# PARAMETERS
-# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TEST 1: Series System Exponential Components
+# -----------------------------------------------------------------------------
+# PARAMETERS:
 @pytest.mark.parametrize(
     "dist_type, kwargs",
     [
@@ -132,6 +135,7 @@ def expected_series():
     ]
 )
 
+# TEST FUNCTION:
 def test_series_system_exponential(dist_type, kwargs, system_factory, expected_series, plot_enabled):
     """
     Monte-Carlo validation of system R(t), f(t), hazard z(t), MTTF.
@@ -208,15 +212,10 @@ def test_series_system_exponential(dist_type, kwargs, system_factory, expected_s
     # check the MTTF is reasonably close to expectation 1% difference
     assert(np.isclose(MTTF_sim, MTTF_analytical, rtol=MTTF_analytical*0.01))
 
-# =============================================================================
-# WEIBULL SERIES SYSTEM TEST 1
-# all components having the same shape and scale parameters
-#   scale_param = θ = η 
-#   shape param = α = k
-#   MTTF = scale_param * gamma(1+1/shape_param)
-# =============================================================================
+# ------------------------------------------------------------------------------ 
+# TEST 2: Series System Weibull Components - Identical Shape Parameters
+# ------------------------------------------------------------------------------ 
 # PARAMETERS
-# =============================================================================
 @pytest.mark.parametrize(
     "dist_type, kwargs",
     [
@@ -224,11 +223,14 @@ def test_series_system_exponential(dist_type, kwargs, system_factory, expected_s
     ]
 )
 
+# TEST FUNCTION
 def test_series_system_weibull_identical(dist_type, kwargs, system_factory, expected_series, plot_enabled):
     """
     Check that the resultant Rs(t), z_s(t), and fs(t) matches analytic solution
     (analytic solution only available if all components have the same shape parameter)
-    
+            SHAPE parameter (k/β)
+            SCALE parameter (θ)
+            MTTF = θ * Γ(1 + 1/k)
     """
     N = 12000
     systems = system_factory("weib", kwargs, n=N)
@@ -267,30 +269,26 @@ def test_series_system_weibull_identical(dist_type, kwargs, system_factory, expe
         plt.legend()
         plt.show()
     
-
-# =============================================================================
-# WEIBULL SERIES SYSTEM TEST 2
-# Series system of three Weibull components:
-#   - Comp1: k < 1  (decreasing failure rate)
-#   - Comp2: k = 1  (constant failure rate / exponential)
-#   - Comp3: k > 1  (increasing failure rate)
-# =============================================================================
+# -----------------------------------------------------------------------------
+# TEST 3: Series System Weibull Components - Mixed Shape Parameters- BATHTUB CURVE
+# -----------------------------------------------------------------------------
 # PARAMETERS
-# =============================================================================
-def test_series_system_weibull_mixed_hazard_terms():
+def test_series_system_weibull_mixed_hazard_terms(plot_enabled):
     """
-    A series system composed of Weibull components with
-    k < 1, k = 1, and k > 1 must produce a system hazard z_s(t)
-    containing:
+    Series system of three Weibull components:
+        - Comp1: k < 1  (decreasing failure rate)
+        - Comp2: k = 1  (constant failure rate / exponential)
+        - Comp3: k > 1  (increasing failure rate)
+    must produce a system hazard z_s(t) containing:
       - one constant term
       - one term with positive exponent of t
       - one term with negative exponent of t
     """
 
     # Create components and add to series system
-    IFR_comp = WeibullComponent("IFR", MTTF=3500, MTTR=1, shape=1.2)
-    CFR_comp = WeibullComponent("CFR", MTTF=200,  MTTR=1, shape=1.0)
-    DFR_comp = WeibullComponent("DFR", MTTF=100,  MTTR=1, shape=0.8)
+    IFR_comp = WeibullComponent("IFR", MTTF=3000, MTTR=1, shape= 4.5)
+    CFR_comp = WeibullComponent("CFR", MTTF=4000,  MTTR=1, shape= 1.0)
+    DFR_comp = WeibullComponent("DFR", MTTF=2000,  MTTR=1, shape= 0.8)
     sys = SeriesSystem("mixed_weibull_sys", [IFR_comp, CFR_comp, DFR_comp])
 
     # Symbolic system hazard rate
@@ -318,4 +316,14 @@ def test_series_system_weibull_mixed_hazard_terms():
     assert has_constant, "System hazard must contain a constant term (k = 1)"
     assert has_positive, "System hazard must contain a positive-power term (k > 1)"
     assert has_negative, "System hazard must contain a negative-power term (k < 1)"
-
+    
+    if plot_enabled:
+        plt.figure()
+        time_points = np.linspace(0.1, 4000, 1000)
+        z_s_func = sp.lambdify(t, z_s, "numpy")
+        z_s_values = z_s_func(time_points)
+        plt.plot(time_points, z_s_values, "b-")
+        plt.title(rf"System Hazard Rate z$_s$(t) with Mixed Weibull Components")
+        plt.xlabel("Time t")
+        plt.ylabel(rf"Hazard Rate z$_s$(t)")
+        plt.show()

@@ -8,13 +8,10 @@ from system_objects.series_system import SeriesSystem
 from system_objects.parallel_system import ParallelSystem
 from system_objects.kooN_system import KOutOfNSystem
 
-# -----------------------------------------------------------------------------
-# HELPER FUNCTION: 
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
+# =============================================================================
 # FIXTURES : variables/functions available to each test
-# -----------------------------------------------------------------------------
+# =============================================================================
+
 @pytest.fixture
 def num_comps():
     """Number of components in each system."""
@@ -24,7 +21,6 @@ def num_comps():
 def k():
     return 2
 
-
 @pytest.fixture
 def comps(num_comps):
     """
@@ -33,14 +29,12 @@ def comps(num_comps):
     """
     return [ExponentialComponent(f"Comp{i+1}", MTTF = 50*(i+1), MTTR = 1) for i in range(num_comps)]
 
-
 @pytest.fixture
 def series_system(comps):
     """
     A single SeriesSystem instance built from the component list.
     """
     return SeriesSystem("SeriesSystem", comps)
-
 
 @pytest.fixture
 def systems():
@@ -79,7 +73,6 @@ def systems():
 
     return __factory__
 
-
 @pytest.fixture
 def expected():
     """
@@ -95,6 +88,7 @@ def expected():
 
         # ---- SERIES ----
         if system_type == "series":
+            # Relaibility(t) = Π_i (e^{-λ_i t})
             return 1.0 / lambdas.sum()
 
         # ---- PARALLEL ----
@@ -109,8 +103,6 @@ def expected():
 
         # ---- K OF N ----
         elif system_type == "kooN":
-            # if k is None:
-            #     raise ValueError("k must be provided for k-of-n analytic MTTF")
 
             n = len(comps)
 
@@ -132,13 +124,17 @@ def expected():
 
     return __factory__
 
+# =============================================================================
+# TESTS
+# =============================================================================
+
 # -----------------------------------------------------------------------------
-# PARAMETERS AND PARAMETER SETS
+# TEST 1: Test the simulated system meets expected reliability metrics
 # -----------------------------------------------------------------------------
+# PARAMETERS
 @pytest.mark.parametrize("system_type", ["series", "parallel", "kooN"])
-# -----------------------------------------------------------------------------
-# TEST FUNCTION 1: Test the simulated system meets expected reliability metrics
-# -----------------------------------------------------------------------------
+
+# TEST FUNCTION
 def test_series_system(system_type, comps, systems):
     
     """ 

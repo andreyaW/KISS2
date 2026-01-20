@@ -11,7 +11,7 @@ class ExponentialComponent(BaseComponent):
     def __post_init__(self):
         super().__post_init__() 
         self._lambda = 1/self.MTTF  # constant failure rate
-        self.time_to_failure = self.sample_failure_time()
+        self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt
 
     def R_t(self, t):
         """Survivor function: system reliability over time."""

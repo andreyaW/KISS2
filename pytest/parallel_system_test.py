@@ -70,9 +70,7 @@ def expected_parallel():
     def __factory__(dist_type, params):
         t = sp.Symbol("t", real=True, positive=True)
 
-        # ======================================================
-        # PARALLEL EXPONENTIAL
-        # ======================================================
+        # EXPONENTIAL COMPS PARALLEL SOLUTION
         if dist_type == "exp":
             lambdas = [1 / MTTF for MTTF in params]
 
@@ -86,9 +84,7 @@ def expected_parallel():
 
             return R_s_t, f_s_t, z_s_t
 
-        # ======================================================
-        # PARALLEL WEIBULL (COMMON SHAPE)
-        # ======================================================
+        # WEIBULL COMPS PARALLEL SOLUTION
         elif dist_type == "weib":
             mttfs = [p[0] for p in params]
             shapes = [p[1] for p in params]
@@ -122,12 +118,13 @@ def expected_parallel():
 
 
 # =============================================================================
-#  PARALLEL SYSTEM TEST
-# check that the solution for exponential components in series matches analytical solution
-# for i=1,2...n : Rs(t) = 1-∏_i(1-(e^λ_i*t)
+# TESTS
 # =============================================================================
-# PARAMETERS
-# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TEST 1 : Check that Parallel System Reliability Matches Analytic Expression
+# ---------------------------------------------------------------------------- 
+# PARAMETERS:
 @pytest.mark.parametrize(
     "dist_type, params, time_scale",
     [
@@ -147,6 +144,7 @@ def expected_parallel():
     ]
 )
 
+# TEST FUNCTION:
 def test_parallel_system_general(
     dist_type,
     params,

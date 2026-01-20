@@ -15,7 +15,7 @@ class WeibullComponent(BaseComponent):
         # Compute scale parameter from MTTF and shape
         self.scale = self.MTTF / gamma(1 + 1/self.shape)
         self._lambda = 1 / self.scale
-        self.time_to_failure = self.sample_failure_time()
+        self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt
 
     def R_t(self, t):
         """Survivor function: system reliability over time."""

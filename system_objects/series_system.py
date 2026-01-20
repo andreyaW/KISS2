@@ -67,6 +67,8 @@
 # ----------------------------------------------------------------------
 from dataclasses import dataclass
 from system_objects.base_system import BaseSystem
+import sympy as sp
+
 
 @dataclass
 class SeriesSystem(BaseSystem):

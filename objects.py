@@ -84,10 +84,10 @@ class BasicObject(ABC):
         # BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
 
     # COMMON METHODS = methods shared by all subclasses (inherited as-is)
-    def health_reset(self, repair_time: float):
+    def health_reset(self, repair_duration: float):
         """Reset the object's health/state to initial conditions."""
         t_repair = 0.0
-        while t_repair < repair_time:
+        while t_repair < repair_duration:
             self.current_time += self.dt
             t_repair += self.dt
             self.history = np.vstack([
@@ -97,13 +97,12 @@ class BasicObject(ABC):
 
         # Reset for new life
         self.state = 1
-        self.life_time = 0.0
+        self.history[-1] = [self.current_time, self.state]
+        
+        # sample a new TTF from failure distribution
         self.time_to_failure = self.sample_failure_time()
 
-        self.history = np.vstack([
-            self.history,
-            [self.current_time, 1]
-        ])
+
 
     def plot_history(self, ax=None):
         """Plot the history of the object's state over time."""
@@ -112,7 +111,7 @@ class BasicObject(ABC):
     
         times = self.history[:, 0]
         states = self.history[:, 1]
-        ax.plot(times, states, label=self.name, linestyle ='--') #drawstyle='steps-post',
+        ax.plot(times, states, '--o', label=self.name) #drawstyle='steps-post',
         ax.set_title(f"State History of {self.name.title()}")
         plt.legend(
             loc="upper left",
