@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from objects import BasicObject
+
 import numpy as np
+import matplotlib.pyplot as plt
 
 # GLOBAL CONSTANTS FOR COMPONENT STATES
 WORKING_STATE = 1
@@ -73,12 +75,12 @@ class BaseComponent(BasicObject, ABC):
         self.current_time += dt
         
         # Update state based on time to failure
-        if  REPAIR_STATE in self.history:
+        if  REPAIR_STATE in self.history[:,1]:
             if self.current_time - self.last_repair_time() >= self.time_to_failure:
-                self.state = 0  # Component has failed
+                self.state = FAILED_STATE  # Component has failed
         else :
             if self.current_time >= self.time_to_failure:
-                self.state = 0  # Component has failed
+                self.state = FAILED_STATE  # Component has failed
        
         # Append row [time, state] to history
         new_row = np.array([[self.current_time, self.state]])
@@ -93,57 +95,54 @@ class BaseComponent(BasicObject, ABC):
             return 0.0
         else:
             return repair_times[-1]
+    
+    # sample repair time from lognormal distribution
+    def sample_repair_time(self, cv, min_time) -> float:
+        sigma = np.sqrt(np.log(1.0 + cv**2))
+        mu = np.log(self.MTTR) - 0.5 * sigma**2
+
+        return max(
+            np.random.lognormal(mu, sigma),
+            min_time
+        )
         
-    def repair(self, cv: float = 0.25, min_time: float = 1.0):
+    def repair(self, t_end, cv: float = 0.25, min_time: float = 1.0):
         """ Sample repair time from lognormal distribution and update state history. 
         (Repair State = -1), """
-        
-        # sample repair time from lognormal distribution
-        def __sample_repair_time(self, cv, min_time) -> float:
-            sigma = np.sqrt(np.log(1.0 + cv**2))
-            mu = np.log(self.MTTR) - 0.5 * sigma**2
-
-            return max(
-                np.random.lognormal(mu, sigma),
-                min_time
-            )
                             
-        repair_time = __sample_repair_time(self, cv, min_time)
+        repair_time = self.sample_repair_time(cv, min_time)
         repair_time = np.ceil(repair_time / self.dt) * self.dt # round up to nearest dt
         repair_end_time = self.current_time + repair_time
-        print("TTF: ", self.time_to_failure)
-        print("Repair Duration: ", repair_time)
         
-        while self.current_time != repair_end_time:
+        while self.current_time != repair_end_time and self.current_time < t_end- self.dt:
             self.current_time += self.dt
             
             # Append repair state (-1) to history
-            new_row = np.array([[self.current_time, -1]])
+            new_row = np.array([[self.current_time, REPAIR_STATE]])
             self.history = np.vstack([self.history, new_row])
 
+        if self.current_time >= t_end:
+            time_left_on_repair = repair_end_time - self.current_time
+            return  # Exit if simulation time has ended
+                            
         # After repair, set state to working and sample new failure time
-        self.state = 1
-        self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt
-        print("New TTF after repair: ", self.time_to_failure, "\n")
-        
-        # Append working state (1) to history
-        self.current_time = repair_end_time
-        new_row = np.array([[self.current_time, self.state]])
-        self.history = np.vstack([self.history, new_row])
+        self.state = WORKING_STATE
+        self.history[-1] = [self.current_time, self.state]  # update last entry to working state
+        self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt        
         
     # ----------------------------------------------------------------------
     # SIMULATION LOOP
     def simulate(self, t_end: float, dt: float = 1.0, repairable: bool = False):
             """Run full simulation."""
-            t = 0.0
+
             self.dt = dt
-            while self.current_time < t_end:
+            current_time = self.current_time
+            while self.current_time < current_time+t_end:
                 self.step(dt)
                 
-                if repairable and self.state == 0:
+                if repairable and self.state == FAILED_STATE:
                     self.repairable = True
-                    self.repair()
-                t += dt
+                    self.repair(t_end)
 
     # -------------------------------------------------------------------------
     # PLOTTING
@@ -151,5 +150,13 @@ class BaseComponent(BasicObject, ABC):
         """Plot the history of the component's state over time."""
         ax = super().plot_history(ax)
         
-        if self.repairable: 
-            ax.set_ylim(-1.1, 1.1)
+
+        # if (REPAIR_STATE in self.history[:,1]): 
+        ax.set_ylim(-1.1, 1.1)
+        ax.set_yticks([-1, 0, 1])
+        ax.set_yticklabels(['Repairing', 'Failed', 'Working'])
+            
+        # else:
+        #     ax.set_ylim(-0.1, 1.1)
+        
+        plt.show()

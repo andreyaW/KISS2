@@ -21,7 +21,10 @@ def n():
 @pytest.fixture
 def comps(component_class, kwargs, n):
     # Build components
-    return [component_class(name=f"comp_{i}", **kwargs, MTTR=2) for i in range(n)]
+    if "MTTR" in kwargs:
+        return [component_class(name=f"comp_{i}", **kwargs) for i in range(n)]
+    else:
+        return [component_class(name=f"comp_{i}", **kwargs, MTTR=2) for i in range(n)]
 
 # =============================================================================
 # TESTS
@@ -133,7 +136,7 @@ def test_comp_R_s_t(comps, plot_enabled):
 # PARAMETERS:
 @pytest.mark.parametrize("component_class, kwargs", [
     # Exponential: uses only MTTF
-    (ExponentialComponent, {"MTTF": 10, "MTTR" : 4, "repairable": True}),
+    (ExponentialComponent, {"MTTF": 1000, "MTTR" : 5}),
 ])
 
 # TEST FUNCTION
@@ -143,22 +146,36 @@ def test_comp_availability(kwargs, comps):
         (based on example 6.13 from 'System Reliability Theory' by Rausand and Hoyland) """
         
     # time array 
-    total_time = 1000
+    total_time = 10000
     dt = 1
-    time_array = np.arange(0, total_time, dt)
         
     # analytical availability
     MTTF = kwargs["MTTF"]
     MTTR = kwargs["MTTR"]
     failure_rate = 1 / MTTF
     repair_rate = 1 / MTTR
-    A_t_analytical = repair_rate / (failure_rate + repair_rate) + (failure_rate / (failure_rate + repair_rate)) * sp.exp(-(failure_rate + repair_rate) * time_array)
-    A_t_limit = repair_rate / (failure_rate + repair_rate) 
+    A_analytical = repair_rate / (failure_rate + repair_rate)  
+    print(f"Analytical Availability: {A_analytical:.4f}") 
     
-    # simulated availability
-    comps.simulate(total_time, dt, repairable=True)
-    
-    working_state = max(comps[0].history)  # assuming history records 1 for working, 0 for failed
-    failed_state = min(comps[0].history)
+    # simulate components
+    A_sim = np.zeros_like(comps, dtype=float)
+    for i,c in enumerate(comps):
+        c.simulate(total_time, dt, repairable=True)
+        # c.plot_history()
+        
+        # calculate simulated uptime and downtime
+        states = c.history[1:, 1]     # skip initial condition
+        uptime = np.sum(states == 1) * dt
+        downtime = np.sum(states != 1) * dt
 
-    # deterimine mean up time and down time
+        # simulated availability
+        A_sim[i] = uptime / (uptime + downtime)
+        
+    # print(f"Simulated Availability: {A_sim:.4f}")
+
+    # assertion
+    tolerance = 0.05
+    assert np.isclose(A_sim, A_analytical, atol=tolerance), (
+        f"Simulated A={A_sim:.4f}, Analytical A={A_analytical:.4f}"
+    )
+    

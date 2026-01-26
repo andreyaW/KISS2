@@ -12,8 +12,14 @@ import pandas as pd
 import sympy as sp
 import matplotlib.pyplot as plt
 
-REPAIR_STATE = -1  # global constant for repair
+# GLOBAL CONSTANTS FOR SYSTEM STATES
+WORKING_STATE = 1
+FAILED_STATE = 0
+REPAIR_STATE = -1
 
+# =============================================================================
+# BASE SYSTEM CLASS
+# =============================================================================
 @dataclass
 class BaseSystem(BasicObject, ABC):
     # -------------------------------------------------------------------------
@@ -68,77 +74,118 @@ class BaseSystem(BasicObject, ABC):
 
     # -------------------------------------------------------------------------
     # REPAIR LOGIC
-    def components_to_repair(self):
-        """Return list of components that must be repaired to restore system."""
-        return [comp for comp in self.components if comp.state == 0]
-    
-    def _advance_time_during_repair(self,max_repair_time, comps_not_under_repair, dt):
-        """Advance time for the system and the components not being repaired in discrete steps while components are under repair."""
-        
-        # add steps to each component not under repair
-        t_advanced = 0.0
-        while t_advanced < max_repair_time:
-            step_time = min(dt, max_repair_time - t_advanced)
-            for comp in comps_not_under_repair:
-                comp.step(step_time)
-            t_advanced += step_time
-            self.current_time += step_time
-            self.history = np.vstack([
-                self.history,
-                [self.current_time, self.state]
-            ])
-        
-
     def repair(self, dt: float = 1.0):
-        """ Sample and queue repair for the system and its components. """
+        """Trigger component-level repairs and advance system time accordingly."""
 
-        # determine which components need repair and how long it will take
-        comps_to_repair = self.components_to_repair()
-        comps_not_under_repair = [c for c in self.components if c not in comps_to_repair]
-        repair_times = [(c, c.sample_repair_time()) for c in comps_to_repair]
-        
-        # use the max repair time and the repair limit to determine how components are being repaired
-        max_repair_time = max(rt for c, rt in repair_times) if repair_times else 0.0
-        repair_limit = 2 # arbitrary limit for simultaneous repairs
-        
-        if len(repair_times) <= repair_limit:
-            # repair all components simultaneously
-            for comp, repair_time in repair_times:
-                comp.repair(repair_time)
+        failed_components = [c for c in self.components if c.state == FAILED_STATE]
+        if not failed_components:
+            return
+
+        repair_end_times = []
+
+        # Trigger component repairs
+        for comp in failed_components:
+            comp.dt = dt
+            start_time = self.current_time
+            comp.current_time = start_time
+
+            comp.repair(
+                t_end=np.inf,  # let component finish its repair
+                cv=getattr(comp, "CV_repair", 0.25),
+                min_time=1.0
+            )
+
+            repair_end_times.append(comp.current_time)
+
+        # Advance system time to the latest repair completion
+        self.current_time = max(repair_end_times)
+
+        # Sync all components to system time
+        for comp in self.components:
+            comp.current_time = self.current_time
+            if comp.history[-1, 0] != self.current_time:
+                comp.history = np.vstack([
+                    comp.history,
+                    [self.current_time, comp.state]
+                ])
+
+        # Update system state
+        self.state = self.structure_function()
+        self.history = np.vstack([
+            self.history,
+            [self.current_time, self.state]
+        ])
+
+    '''
+    def repair(self, dt: float = 1.0):
+        # """ Sample and queue repair for the system and its components. """
+        comps_to_repair = [comp for comp in self.components if comp.state == 0]
+        if not comps_to_repair:
+            return  # No components need repair
+        comps_not_under_repair = [comp for comp in self.components if comp not in comps_to_repair]        
+
+        # Sample repair times for components
+        repair_times = {}
+        for comp in comps_to_repair:
+            cv = getattr(comp, "CV_repair", 0.0)
+            # min_time = getattr(comp, "min_repair_time", 1.0)
+            repair_time = comp.sample_repair_time(cv, 1.0)
+            repair_time = np.ceil(repair_time / dt) * dt  # round up to nearest dt
+            repair_times[comp.name] = repair_time
+        max_repair_time = max(repair_times.values())
+        print(repair_times)
+
+        # Set components to repair state over the repair duration
+        repair_end_time = self.current_time + max_repair_time
+        while self.current_time < repair_end_time+dt:
+            self.current_time += dt
+            for comp in self.components:
                 
-            self._advance_time_during_repair(max_repair_time, comps_not_under_repair, dt)
-    
-        # else: 
-        #     # repair components in batches according to the repair limit
-        #     for i in range(0, len(repair_times), repair_limit):
-        #         batch = repair_times[i:i+repair_limit]
-        #         for comp, repair_time in batch:
-        #             comp.repair(repair_time)                   
-                                    
-            # self._advance_time_during_repair(repair_times, dt)
-        
-        
+                # Update the state of components under repair
+                if comp in comps_to_repair:
+                    comp.state = REPAIR_STATE
+                    comp.current_time = self.current_time
+                    
+                    # Check if repair is complete
+                    if self.current_time >= (repair_end_time - repair_times[comp.name]):
+                        comp.state = WORKING_STATE
+                     
+                    # Append row [time, state] to history
+                    new_row = np.array([[comp.current_time, comp.state]])
+                    comp.history = np.vstack([comp.history, new_row])
+                   
+                # Step components not under repair
+                else:
+                    comp.step(dt)
+
+            # Update system state during repair
+            self.state = self.structure_function()
+            self.history = np.vstack([self.history, [self.current_time, self.state]])
+                    
+        # After repairs, update system state to reflect repaired components
+        self.state = self.structure_function()
+        self.history[-1] = [self.current_time, self.state]  # update last entry to current state
+        '''
+      
     # -------------------------------------------------------------------------
     # SIMULATION LOOP
     def simulate(self, t_end: float, dt: float = 1.0, repairable: bool = False):
-        
-        # mark all the components as repairable if the system is repairable
-        if repairable:
-            for comp in self.components:
-                comp.repairable = True
+        """Simulate the system operating for t_end/dt time steps. If repairable the system will undergo repair after failure, if not repairable the system will remain failed. 
+
+        Args:
+            t_end (float): last time of simulation
+            dt (float, optional): time step (delta_t). Defaults to 1.0.
+            repairable (bool, optional): Determines if the system is repairable. Defaults to False.
+        """
         
         self.dt = dt
-        while self.current_time < t_end:
+        end_time = self.current_time + t_end
+        while self.current_time < end_time:
             self.step(dt)
             if repairable and self.state == 0:
-                self.repair(dt)
-                
-            # print(f"  System State: {self.state}")
-            # for comp in self.components:
-            #     print(f"    {comp.name} State: {comp.state}")
-            #     print(f" {comp.name} History Length: {len(comp.history)}")
-                        
-        # self._build_all_histories()
+                self.repair(dt)                
+        # After simulation, build all histories as a DataFrame
+        self._build_all_histories()
 
     # -------------------------------------------------------------------------
     # HISTORY BUILDER

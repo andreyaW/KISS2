@@ -121,7 +121,6 @@ class BasicObject(ABC):
         )
         ax.set_xlabel("Time")
         ax.set_ylabel("State")
-        ax.set_ylim(0.1, 1.1)
         ax.grid()
         
         return ax

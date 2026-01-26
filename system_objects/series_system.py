@@ -73,7 +73,7 @@ import sympy as sp
 @dataclass
 class SeriesSystem(BaseSystem):
     def structure_function(self) -> int:
-        return 1 if all(c.state == 1 for c in self.components) else 0
+        return min(c.state for c in self.components)
 
     def components_to_repair(self):
         # Series: must repair all failed components
