@@ -28,6 +28,7 @@ class BaseComponent(BasicObject, ABC):
     current_time: float = field(default=0.0, init=False)
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
     repairable: bool = field(default=False, init=False)
+    repair_end_time: float | None = field(default=None, init=False)
 
     # -------------------------------------------------------------------------
     # INITIALIZATION
@@ -70,21 +71,41 @@ class BaseComponent(BasicObject, ABC):
     # ----------------------------------------------------------------------
     # OPERATION STEP
     def step(self, dt: float = 1.0):
-        """Advance time, update state, and append to history."""
-        # Advance time
         self.current_time += dt
-        
-        # Update state based on time to failure
-        if  REPAIR_STATE in self.history[:,1]:
-            if self.current_time - self.last_repair_time() >= self.time_to_failure:
-                self.state = FAILED_STATE  # Component has failed
-        else :
+
+        if self.state == REPAIR_STATE:
+            if self.current_time >= self.repair_end_time:
+                self.state = WORKING_STATE
+                self.repair_end_time = None
+                self.time_to_failure = np.ceil(
+                    self.sample_failure_time() / dt
+                ) * dt
+
+        elif self.state == WORKING_STATE:
             if self.current_time >= self.time_to_failure:
-                self.state = FAILED_STATE  # Component has failed
+                self.state = FAILED_STATE
+
+        self.history = np.vstack([
+            self.history,
+            [self.current_time, self.state]
+        ])
+        
+    # def step(self, dt: float = 1.0):
+    #     """Advance time, update state, and append to history."""
+    #     # Advance time
+    #     self.current_time += dt
+        
+    #     # Update state based on time to failure
+    #     if  REPAIR_STATE in self.history[:,1]:
+    #         if self.current_time - self.last_repair_time() >= self.time_to_failure:
+    #             self.state = FAILED_STATE  # Component has failed
+    #     else :
+    #         if self.current_time >= self.time_to_failure:
+    #             self.state = FAILED_STATE  # Component has failed
        
-        # Append row [time, state] to history
-        new_row = np.array([[self.current_time, self.state]])
-        self.history = np.vstack([self.history, new_row])
+    #     # Append row [time, state] to history
+    #     new_row = np.array([[self.current_time, self.state]])
+    #     self.history = np.vstack([self.history, new_row])
 
     # -------------------------------------------------------------------------
     # REPAIR LOGIC
@@ -105,30 +126,38 @@ class BaseComponent(BasicObject, ABC):
             np.random.lognormal(mu, sigma),
             min_time
         )
-        
-    def repair(self, t_end, cv: float = 0.25, min_time: float = 1.0):
-        """ Sample repair time from lognormal distribution and update state history. 
-        (Repair State = -1), """
-                            
-        repair_time = self.sample_repair_time(cv, min_time)
-        repair_time = np.ceil(repair_time / self.dt) * self.dt # round up to nearest dt
-        repair_end_time = self.current_time + repair_time
-        
-        while self.current_time != repair_end_time and self.current_time < t_end- self.dt:
-            self.current_time += self.dt
-            
-            # Append repair state (-1) to history
-            new_row = np.array([[self.current_time, REPAIR_STATE]])
-            self.history = np.vstack([self.history, new_row])
 
-        if self.current_time >= t_end:
-            time_left_on_repair = repair_end_time - self.current_time
-            return  # Exit if simulation time has ended
+    def start_repair(self, cv: float = 0.25, min_time: float = 1.0):
+        """Initialize repair but do NOT advance time."""
+        repair_time = self.sample_repair_time(cv, min_time)
+        repair_time = np.ceil(repair_time / self.dt) * self.dt
+
+        self.repair_end_time = self.current_time + repair_time
+        self.state = REPAIR_STATE
+                
+    # def repair(self, t_end, cv: float = 0.25, min_time: float = 1.0):
+    #     """ Sample repair time from lognormal distribution and update state history. 
+    #     (Repair State = -1), """
                             
-        # After repair, set state to working and sample new failure time
-        self.state = WORKING_STATE
-        self.history[-1] = [self.current_time, self.state]  # update last entry to working state
-        self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt        
+    #     repair_time = self.sample_repair_time(cv, min_time)
+    #     repair_time = np.ceil(repair_time / self.dt) * self.dt # round up to nearest dt
+    #     repair_end_time = self.current_time + repair_time
+        
+    #     while self.current_time != repair_end_time and self.current_time < t_end- self.dt:
+    #         self.current_time += self.dt
+            
+    #         # Append repair state (-1) to history
+    #         new_row = np.array([[self.current_time, REPAIR_STATE]])
+    #         self.history = np.vstack([self.history, new_row])
+
+    #     if self.current_time >= t_end:
+    #         time_left_on_repair = repair_end_time - self.current_time
+    #         return  # Exit if simulation time has ended
+                            
+    #     # After repair, set state to working and sample new failure time
+    #     self.state = WORKING_STATE
+    #     self.history[-1] = [self.current_time, self.state]  # update last entry to working state
+    #     self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt        
         
     # ----------------------------------------------------------------------
     # SIMULATION LOOP

@@ -74,47 +74,14 @@ class BaseSystem(BasicObject, ABC):
 
     # -------------------------------------------------------------------------
     # REPAIR LOGIC
-    def repair(self, dt: float = 1.0):
-        """Trigger component-level repairs and advance system time accordingly."""
-
-        failed_components = [c for c in self.components if c.state == FAILED_STATE]
-        if not failed_components:
-            return
-
-        repair_end_times = []
-
-        # Trigger component repairs
-        for comp in failed_components:
-            comp.dt = dt
-            start_time = self.current_time
-            comp.current_time = start_time
-
-            comp.repair(
-                t_end=np.inf,  # let component finish its repair
-                cv=getattr(comp, "CV_repair", 0.25),
-                min_time=1.0
-            )
-
-            repair_end_times.append(comp.current_time)
-
-        # Advance system time to the latest repair completion
-        self.current_time = max(repair_end_times)
-
-        # Sync all components to system time
+    def repair(self):
+        """Start repairs on failed components (no time advancement)."""
         for comp in self.components:
-            comp.current_time = self.current_time
-            if comp.history[-1, 0] != self.current_time:
-                comp.history = np.vstack([
-                    comp.history,
-                    [self.current_time, comp.state]
-                ])
-
-        # Update system state
-        self.state = self.structure_function()
-        self.history = np.vstack([
-            self.history,
-            [self.current_time, self.state]
-        ])
+            if comp.state == FAILED_STATE:
+                comp.start_repair(
+                    cv=getattr(comp, "CV_repair", 0.25),
+                    min_time=1.0
+                )
 
     '''
     def repair(self, dt: float = 1.0):
@@ -183,7 +150,7 @@ class BaseSystem(BasicObject, ABC):
         while self.current_time < end_time:
             self.step(dt)
             if repairable and self.state == 0:
-                self.repair(dt)                
+                self.repair()                
         # After simulation, build all histories as a DataFrame
         self._build_all_histories()
 
