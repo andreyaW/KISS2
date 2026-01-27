@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # GLOBAL CONSTANTS FOR COMPONENT STATES
-WORKING_STATE = 1
-FAILED_STATE = 0
-REPAIR_STATE = -1
+WORKING_STATE = int(1)
+FAILED_STATE = int(0)
+REPAIR_STATE = int(-1)
 
 # =============================================================================
 # BASE COMPONENT CLASS
@@ -36,7 +36,7 @@ class BaseComponent(BasicObject, ABC):
         if self.MTTF <= 0:
             raise ValueError(f"{self.name}: MTTF must be positive.")
 
-        self.state = 1
+        self.state = WORKING_STATE
         self.current_time = 0.0
         
         # Initialize history as an array with the initial state
@@ -85,28 +85,14 @@ class BaseComponent(BasicObject, ABC):
             if self.current_time >= self.time_to_failure:
                 self.state = FAILED_STATE
 
+        # print(type(self.state))
+
         self.history = np.vstack([
             self.history,
-            [self.current_time, self.state]
+            [self.current_time, int(self.state)]
         ])
         
-    # def step(self, dt: float = 1.0):
-    #     """Advance time, update state, and append to history."""
-    #     # Advance time
-    #     self.current_time += dt
-        
-    #     # Update state based on time to failure
-    #     if  REPAIR_STATE in self.history[:,1]:
-    #         if self.current_time - self.last_repair_time() >= self.time_to_failure:
-    #             self.state = FAILED_STATE  # Component has failed
-    #     else :
-    #         if self.current_time >= self.time_to_failure:
-    #             self.state = FAILED_STATE  # Component has failed
-       
-    #     # Append row [time, state] to history
-    #     new_row = np.array([[self.current_time, self.state]])
-    #     self.history = np.vstack([self.history, new_row])
-
+        # print(type(self.history[-1,1]))
     # -------------------------------------------------------------------------
     # REPAIR LOGIC
     def last_repair_time(self) -> float:
@@ -135,30 +121,6 @@ class BaseComponent(BasicObject, ABC):
         self.repair_end_time = self.current_time + repair_time
         self.state = REPAIR_STATE
                 
-    # def repair(self, t_end, cv: float = 0.25, min_time: float = 1.0):
-    #     """ Sample repair time from lognormal distribution and update state history. 
-    #     (Repair State = -1), """
-                            
-    #     repair_time = self.sample_repair_time(cv, min_time)
-    #     repair_time = np.ceil(repair_time / self.dt) * self.dt # round up to nearest dt
-    #     repair_end_time = self.current_time + repair_time
-        
-    #     while self.current_time != repair_end_time and self.current_time < t_end- self.dt:
-    #         self.current_time += self.dt
-            
-    #         # Append repair state (-1) to history
-    #         new_row = np.array([[self.current_time, REPAIR_STATE]])
-    #         self.history = np.vstack([self.history, new_row])
-
-    #     if self.current_time >= t_end:
-    #         time_left_on_repair = repair_end_time - self.current_time
-    #         return  # Exit if simulation time has ended
-                            
-    #     # After repair, set state to working and sample new failure time
-    #     self.state = WORKING_STATE
-    #     self.history[-1] = [self.current_time, self.state]  # update last entry to working state
-    #     self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt        
-        
     # ----------------------------------------------------------------------
     # SIMULATION LOOP
     def simulate(self, t_end: float, dt: float = 1.0, repairable: bool = False):

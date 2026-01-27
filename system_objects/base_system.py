@@ -1,11 +1,13 @@
 # ----------------------------------------------------------------------
 # base_system.py
+# Implements a basic system model.
 # ----------------------------------------------------------------------
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from objects import BasicObject
-from utilities import is_numeric
 from component_objects.base_component import BaseComponent
+from utils.helper_functions import is_numeric
+from utils.enums import RepairMode
 
 import numpy as np
 import pandas as pd
@@ -33,6 +35,11 @@ class BaseSystem(BasicObject, ABC):
     # histories
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
     all_histories: pd.DataFrame | None = field(default=None, init=False)
+    
+    # repair attributes
+    repair_mode: RepairMode = RepairMode.ALL
+    max_simultaneous_repairs: int | None = None  # None = unlimited
+    repair_queue: list[BaseComponent] = field(default_factory=list, init=False)
 
     # -------------------------------------------------------------------------
     # INITIALIZATION
@@ -54,86 +61,100 @@ class BaseSystem(BasicObject, ABC):
     def R_s(self, t=None):
         raise NotImplementedError
 
+    @abstractmethod
+    def min_components_required(self) -> int:
+        """Minimum number of working components required for system operation."""
+        raise NotImplementedError
+
     # -------------------------------------------------------------------------
     # OPERATION STEP
-    def step(self, dt: float = 1.0):
-        """Advance time by dt: step all components and update system state."""
+    def step(self, dt: float = 1.0, repairable: bool = False):
         self.current_time += dt
 
-        # Step all components
         for comp in self.components:
             comp.step(dt)
 
-        # Update system state
         self.state = self.structure_function()
+        self.history = np.vstack([
+            self.history,
+            [self.current_time, self.state]
+        ])
+        
+        if repairable:
+            self.schedule_repairs() # will schedule repairs if needed
 
-        # Record system history
-        self.history = np.vstack([self.history, [self.current_time, self.state]])
-
-        return self.state
 
     # -------------------------------------------------------------------------
     # REPAIR LOGIC
-    def repair(self):
-        """Start repairs on failed components (no time advancement)."""
-        for comp in self.components:
-            if comp.state == FAILED_STATE:
-                comp.start_repair(
-                    cv=getattr(comp, "CV_repair", 0.25),
-                    min_time=1.0
-                )
+    def components_needed_for_functionality(self) -> list[BaseComponent]:
+        """
+        Return the minimal set of failed components that must be repaired
+        to restore system functionality, preferring lowest MTTR.
+        """
+        working = [c for c in self.components if c.state == WORKING_STATE]
+        failed = [c for c in self.components if c.state == FAILED_STATE]
 
-    '''
-    def repair(self, dt: float = 1.0):
-        # """ Sample and queue repair for the system and its components. """
-        comps_to_repair = [comp for comp in self.components if comp.state == 0]
-        if not comps_to_repair:
-            return  # No components need repair
-        comps_not_under_repair = [comp for comp in self.components if comp not in comps_to_repair]        
+        required = self.min_components_required()
+        deficit = max(0, required - len(working))
 
-        # Sample repair times for components
-        repair_times = {}
-        for comp in comps_to_repair:
-            cv = getattr(comp, "CV_repair", 0.0)
-            # min_time = getattr(comp, "min_repair_time", 1.0)
-            repair_time = comp.sample_repair_time(cv, 1.0)
-            repair_time = np.ceil(repair_time / dt) * dt  # round up to nearest dt
-            repair_times[comp.name] = repair_time
-        max_repair_time = max(repair_times.values())
-        print(repair_times)
+        if deficit == 0:
+            return []
 
-        # Set components to repair state over the repair duration
-        repair_end_time = self.current_time + max_repair_time
-        while self.current_time < repair_end_time+dt:
-            self.current_time += dt
-            for comp in self.components:
-                
-                # Update the state of components under repair
-                if comp in comps_to_repair:
-                    comp.state = REPAIR_STATE
-                    comp.current_time = self.current_time
-                    
-                    # Check if repair is complete
-                    if self.current_time >= (repair_end_time - repair_times[comp.name]):
-                        comp.state = WORKING_STATE
-                     
-                    # Append row [time, state] to history
-                    new_row = np.array([[comp.current_time, comp.state]])
-                    comp.history = np.vstack([comp.history, new_row])
-                   
-                # Step components not under repair
-                else:
-                    comp.step(dt)
+        failed_sorted = sorted(failed, key=lambda c: c.MTTR)
+        return failed_sorted[:deficit]
 
-            # Update system state during repair
-            self.state = self.structure_function()
-            self.history = np.vstack([self.history, [self.current_time, self.state]])
-                    
-        # After repairs, update system state to reflect repaired components
-        self.state = self.structure_function()
-        self.history[-1] = [self.current_time, self.state]  # update last entry to current state
-        '''
-      
+    def select_repair_targets(self) -> list[BaseComponent]:
+        failed = [c for c in self.components if c.state == FAILED_STATE]
+
+        if self.repair_mode == RepairMode.ALL:
+            return sorted(failed, key=lambda c: c.MTTR)
+
+        if self.repair_mode == RepairMode.FUNCTIONAL:
+            return self.components_needed_for_functionality()
+
+        raise ValueError(f"Unknown repair mode: {self.repair_mode}")
+
+        
+    def schedule_repairs(self):
+        """Schedule repairs based on repair mode and max simultaneous repairs."""
+
+        # Select targets based on policy
+        targets = self.select_repair_targets()
+
+        # Add eligible targets to queue
+        for comp in targets:
+            if comp.state == FAILED_STATE and comp not in self.repair_queue:
+                self.repair_queue.append(comp)
+
+        # Count active repairs
+        active_repairs = [
+            c for c in self.components if c.state == REPAIR_STATE
+        ]
+
+        if self.max_simultaneous_repairs is None:
+            available_slots = len(self.repair_queue)
+        else:
+            available_slots = max(
+                0,
+                self.max_simultaneous_repairs - len(active_repairs)
+            )
+
+        # Start repairs (MTTR-prioritized)
+        for _ in range(available_slots):
+            if not self.repair_queue:
+                break
+
+            comp = self.repair_queue.pop(0)
+
+            # Safety guard
+            if comp.state != FAILED_STATE:
+                continue
+
+            comp.start_repair(
+                cv=getattr(comp, "CV_repair", 0.25),
+                min_time=1.0
+            )
+   
     # -------------------------------------------------------------------------
     # SIMULATION LOOP
     def simulate(self, t_end: float, dt: float = 1.0, repairable: bool = False):
@@ -148,9 +169,8 @@ class BaseSystem(BasicObject, ABC):
         self.dt = dt
         end_time = self.current_time + t_end
         while self.current_time < end_time:
-            self.step(dt)
-            if repairable and self.state == 0:
-                self.repair()                
+            self.step(dt, repairable)
+
         # After simulation, build all histories as a DataFrame
         self._build_all_histories()
 
@@ -224,11 +244,11 @@ class BaseSystem(BasicObject, ABC):
         if self.all_histories is None:
             raise ValueError("Run simulate() before plotting.")
         df = self.all_histories
-        ax.plot(df["time"], df[self.name], "--k", lw=2, label=self.name)
+        ax.plot(df["time"], df[self.name], "*--k", lw=2, label=self.name)
         if plot_comps:
             for col in df.columns[1:]:
                 if col != self.name:
-                    ax.plot(df["time"], df[col], ":", label=col)
+                    ax.plot(df["time"], df[col], ":.", lw=.75, label=col)
         ax.legend(loc="upper left", bbox_to_anchor=(1.05, 1), fancybox=True, shadow=True)
         ax.set_xlabel("Time")
         ax.set_ylabel("State")
