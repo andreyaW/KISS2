@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 
 @dataclass
-class DiagnosisSensor(BaseSensor):
+class DiagnosticSensor(BaseSensor):
     def __init__(self, sensor_reliability: float):
         self.sensor_reliability = sensor_reliability
 

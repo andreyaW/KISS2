@@ -66,23 +66,6 @@ class BasicObject(ABC):
         """
         pass
 
-        # # Calculate number of steps 
-        # num_steps = int(t_end // dt)
-
-        # # Initialize simulation
-        # current_time = 0.0
-        # self.history.append((current_time, self.state))
-        # BasicObject.logger.info(f"Starting simulation for {self.name}: duration={t_end}, dt={dt}, steps={num_steps}")
-
-        # # Main simulation loop
-        # new_history = np.empty((num_steps, 2))  # Initialize empty history array
-        # for i in range(1, num_steps + 1):
-        #     self.step(dt)
-        #     current_time += dt
-        #     new_history[i-1] = (current_time, self.state)
-        # self.history = np.append(self.history, new_history, axis=0) # Append new history records
-        # BasicObject.logger.info(f"Completed simulation for {self.name} at t={current_time}")
-
     # COMMON METHODS = methods shared by all subclasses (inherited as-is)
     def health_reset(self, repair_duration: float):
         """Reset the object's health/state to initial conditions."""

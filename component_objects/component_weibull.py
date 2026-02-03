@@ -16,6 +16,13 @@ class WeibullComponent(BaseComponent):
         self.scale = self.MTTF / gamma(1 + 1/self.shape)
         self._lambda = 1 / self.scale
         self.time_to_failure =  np.ceil(self.sample_failure_time() / self.dt) * self.dt # round up to nearest dt
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, distribution=Weibull(scale={self.scale}, shape={self.shape}, MTTF={self.MTTF}))"
+    
+    def sample_failure_time(self) -> float:
+        """Sample failure time from Weibull distribution."""
+        return np.random.weibull(self.shape) * self.scale
 
     def R_t(self, t):
         """Survivor function: system reliability over time."""
@@ -35,11 +42,4 @@ class WeibullComponent(BaseComponent):
         """Hazard function: failure rate."""
         if isinstance(t, sp.Basic):
             return self.shape * self._lambda * (self._lambda * t) ** (self.shape - 1)
-        return self.shape * self._lambda * (self._lambda * t) ** (self.shape - 1)
-
-    def sample_failure_time(self) -> float:
-        """Sample failure time from Weibull distribution."""
-        return np.random.weibull(self.shape) * self.scale
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name}, state={self.state}, distribution=Weibull(scale={self.scale}, shape={self.shape}, MTTF={self.MTTF}))"
+        return self.shape * self._lambda * (self._lambda * t) ** (self.shape - 1)        

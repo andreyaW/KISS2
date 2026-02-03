@@ -25,7 +25,7 @@ class BaseComponent(BasicObject, ABC):
     state: int = field(default=1, init=False)
     time_to_failure: float = field(init=False)
     dt = 1.0                                    # time step for simulation/ repair
-    current_time: float = field(default=0.0, init=False)
+    current_time: float = field(default=None, init=False)
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
     repairable: bool = field(default=False, init=False)
     repair_end_time: float | None = field(default=None, init=False)
@@ -140,14 +140,27 @@ class BaseComponent(BasicObject, ABC):
     def plot_history(self, ax=None):
         """Plot the history of the component's state over time."""
         ax = super().plot_history(ax)
-        
 
-        # if (REPAIR_STATE in self.history[:,1]): 
-        ax.set_ylim(-1.1, 1.1)
-        ax.set_yticks([-1, 0, 1])
-        ax.set_yticklabels(['Repairing', 'Failed', 'Working'])
-            
-        # else:
-        #     ax.set_ylim(-0.1, 1.1)
-        
-        plt.show()
+        if (REPAIR_STATE in self.history[:,1]): 
+            ax.set_ylim(-1.1, 1.1)
+            ax.set_yticks([-1, 0, 1])
+            ax.set_yticklabels(['Repairing', 'Failed', 'Working'])    
+            plt.show()
+
+
+    def plot_failure_pdf(self, t_array, ax= None):
+        """ Plots the probability distribution of possible failure times using matplotlib and highlights the objects specific failure instance (from sample failure time) """
+        if ax is None:
+            ax = plt.gca()
+
+        ax.plot(t_array,self.f_t(t_array), '-k', label= "failure time pdf")
+        ax.set_ybound(lower=0)
+        self.plot_time_to_fail()
+        ax.legend()
+
+    def plot_time_to_fail(self):
+        "adds comp TTF to any current plot"
+        ax = plt.gca()    
+        color = ax._get_lines.get_next_color()
+        ax.axvline(self.time_to_failure, linestyle ='--', color=color, label=f"{self.name} TTF: {self.time_to_failure:.2f}")
+        ax.legend(loc='best')
