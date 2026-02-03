@@ -10,7 +10,7 @@ class KooNVoteSensedComp(BaseSensedComponent):
 
     # -------------------------------------------------------------------------
     # AGGREGATE SENSOR READINGS
-    def fuse_sensor_readings(self, t: float, dt: float = 1.0):
+    def fuse_diagnostic_readings(self, t: float, dt: float = 1.0):
         """
         Fuse sensor readings using k-out-of-N voting.
         
@@ -44,9 +44,3 @@ class KooNVoteSensedComp(BaseSensedComponent):
         column_names = ['t', self.comp.name+' true state at time t', self.comp.name+' sensed state at time t'] + [sensor.name+' reading for time t' for sensor in self.sensors] + [sensor.name+' true state at time t' for sensor in self.sensors]
         self.all_states = pd.DataFrame(columns=column_names)
         self.N = len(self.sensors)
-
-    # -------------------------------------------------------------------------
-    # OPTIONAL: STRING REPRESENTATION OF THE COMP
-    # -------------------------------------------------------------------------
-    def __repr__(self):
-        return f"<SensedComp: {self.comp.name}, method={self.sensor_fusion_method}>"

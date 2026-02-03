@@ -2,13 +2,13 @@ from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 import numpy as np
 import matplotlib.pyplot as plt
-from objects import BasicObject
+from objects import BasicComponent
 
 
 @dataclass
 class BaseSensor(ABC):
     name: str
-    attached_object: BasicObject
+    comp: BasicComponent
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
     sensed_history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
 

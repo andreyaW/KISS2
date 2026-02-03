@@ -1,8 +1,8 @@
 from component_objects.component_exponential import ExponentialComponent
 from component_objects.component_weibull import WeibullComponent
 
-from sensor_objects.DiagnosisSensor import DiagnosisSensor
-from sensor_objects.PrognosisSensor import PrognosisSensor
+from sensor_objects.observation_matrix_diagnostic_sensor import DiagnosisSensor
+from sensor_objects.prognosis_sensor import PrognosisSensor
 
 from sensed_objects import majority_vote_sensed_comp
 

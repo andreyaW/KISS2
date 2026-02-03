@@ -33,10 +33,11 @@ class QualityBasedSensor(BaseSensor):
             ])
         return obs
 
-    def sensorLogic(self, true_state: int, t: float) -> int:
+    def diagnose(self, true_state: int, t: float) -> int:
         """
         Generate a single sensor reading at a given timestep.
         Returns the sensed state (int).
+        *** Time independent readings
         """
         # extract probability vector for this true state
         probs = self.observation_probs[true_state]

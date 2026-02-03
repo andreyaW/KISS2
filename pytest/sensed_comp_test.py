@@ -2,7 +2,7 @@ import pytest
 from math import comb
 import numpy as np
 
-from sensor_objects.quality_based_sensor import QualityBasedSensor
+from sensor_objects.diagnostic_sensors.quality_based_sensor import QualityBasedSensor
 from component_objects.component_exponential import ExponentialComponent
 from sensed_objects.kooN_vote_sensed_comp import KooNVoteSensedComp
 

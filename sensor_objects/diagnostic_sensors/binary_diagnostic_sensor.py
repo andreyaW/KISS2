@@ -1,4 +1,4 @@
-from sensor_objects.diagnostic_sensor import DiagnosticSensor
+from sensor_objects.diagnostic_sensors.diagnostic_sensor import DiagnosticSensor
 from dataclasses import dataclass
 import numpy as np
 

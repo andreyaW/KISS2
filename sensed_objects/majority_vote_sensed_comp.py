@@ -12,9 +12,3 @@ class MajorityVoteSensedComp(KooNVoteSensedComp):
     def __post_init__(self):
         super().__post_init__()
         self.k = int(self.N // 2 +1) 
-
-    #-------------------------------------------------------------------------
-    # OPTIONAL: REPR
-    # -------------------------------------------------------------------------
-    def __repr__(self):
-        return f"<MajorityVoteSensedComp: {self.comp.name}, method={self.sensor_fusion_method}>"

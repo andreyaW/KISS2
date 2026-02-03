@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from objects import BasicObject
 from component_objects.base_component import BaseComponent
 
 import numpy as np
@@ -17,10 +16,10 @@ class BaseSensedComponent(ABC):
     history: np.ndarray = field(default_factory=lambda: np.empty((0,2)), init=False)
     sensed_history: np.ndarray = field(default_factory=lambda: np.empty((0,2)), init=False)
 
-    @abstractmethod
-    def fuse_sensor_readings(self, t: float) -> int:
-        """Return fused sensor reading from sensors at timestep t."""
-        pass
+    # @abstractmethod
+    # def fuse_diagnostic_readings(self, t: float) -> int:
+    #     """Return fused sensor reading from sensors at timestep t."""
+    #     pass
 
     @abstractmethod
     def __post_init__(self):
@@ -72,3 +71,9 @@ class BaseSensedComponent(ABC):
     # -------------------------------------------------------------------------
     def simulated_sensing_accuracy(self):
         return sum(self.sensed_history[:,1] == self.comp.history[1:,1])/len(self.sensed_history[:,1])
+    
+    def plotHistory(self):
+        pass
+
+    def plotRULHistory(self):
+        pass

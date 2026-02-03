@@ -1,15 +1,15 @@
-from sensor_objects.base_sensor import BaseSensor
+from sensor_objects.prognostic_sensors import PrognosticSensor
 from component_objects.base_component import BaseComponent
 from dataclasses import dataclass
 import numpy as np
         
 @dataclass
-class PrognosisSensor(BaseSensor):
+class ExponentialPrognosticSensor(PrognosticSensor):
 
     prob_predict_t_fail: float = 0.01  # max confidence
     prior_sigma_frac: float = 0.01      # uncertainty as fraction of MTTF
 
-    def exponential_prognosis_probability(
+    def exponential_prognostic_probability(
         self,
         t: float,
         tf: float,
@@ -57,7 +57,7 @@ class PrognosisSensor(BaseSensor):
         sigma_prior = self.prior_sigma_frac * mu_prior
 
         # SENSOR CONFIDENCE
-        prob_correct = self.exponential_prognosis_probability(
+        prob_correct = self.exponential_prognostic_probability(
             t=t,
             tf=tf_true
         )
@@ -84,13 +84,4 @@ class PrognosisSensor(BaseSensor):
             sigma_meas**2 + sigma_prior**2
         )
 
-        return mu_post
-
-    def sensorLogic(self, t):
-        """
-        Generate a prognosis reading at a given timestep.
-        Returns the diagnosed state (int).
-        """
-    
-        return self.predictFailure(t)        
-        
+        return mu_post        

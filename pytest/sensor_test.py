@@ -1,4 +1,4 @@
-from sensor_objects.quality_based_sensor import QualityBasedSensor
+from sensor_objects.diagnostic_sensors.quality_based_sensor import QualityBasedSensor
 from component_objects.component_exponential import ExponentialComponent
 
 import pandas as pd
