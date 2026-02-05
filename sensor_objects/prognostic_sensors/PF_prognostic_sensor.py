@@ -11,19 +11,19 @@ class PF_PrognosticSensor(PrognosticSensor):
 
     def __init__(
         self,
-        # true_ttf,
-        # sensors,
-        # mttf,
+        sensors,
+        comp,
         n_particles=150,
         prior_sigma_frac=0.4
     ):
-        self.true_ttf = true_ttf
+        # self.comp = comp
+        self.true_ttf = comp.time_to_failure
         self.sensors = sensors
         self.n = n_particles
 
-        sigma = prior_sigma_frac * mttf
+        sigma = prior_sigma_frac * comp.MTTF
         self.particles = np.clip(
-            np.random.normal(mttf, sigma, self.n),
+            np.random.normal(comp.MTTF, sigma, self.n),
             0.1,
             None
         )

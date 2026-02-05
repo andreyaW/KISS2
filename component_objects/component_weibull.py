@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from component_objects.base_component import BaseComponent
 from math import gamma
+from scipy.special import gammaincc, gamma
 
 import numpy as np
 import sympy as sp
@@ -43,3 +44,35 @@ class WeibullComponent(BaseComponent):
         if isinstance(t, sp.Basic):
             return self.shape * self._lambda * (self._lambda * t) ** (self.shape - 1)
         return self.shape * self._lambda * (self._lambda * t) ** (self.shape - 1)        
+    
+    
+    def medianTTF(self):
+        return self.scale*(np.log(2))**(1/self.shape)
+    
+    # def RUL(self, t):
+    #     """
+    #     Remaining Useful Life (RUL) distribution given survival to time t.
+    #     Returns a dict with survival, pdf, and sampler.
+    #     """
+
+    #     lam = self._lambda
+    #     k = self.shape
+
+    #     def survival(x):
+    #         return np.exp(-((lam * (t + x)) ** k - (lam * t) ** k))
+
+    #     def pdf(x):
+    #         return (
+    #             k * lam * (lam * (t + x)) ** (k - 1)
+    #             * np.exp(-((lam * (t + x)) ** k - (lam * t) ** k))
+    #         )
+
+    #     def sample(size=1):
+    #         u = np.random.rand(size)
+    #         return ((-(np.log(u) - (lam * t) ** k)) ** (1 / k) - t) / lam
+
+    #     return {
+    #         "survival": survival,
+    #         "pdf": pdf,
+    #         "sample": sample,
+    #     }        

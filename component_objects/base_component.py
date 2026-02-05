@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from objects import BasicObject
+from scipy.integrate import quad
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,8 +24,9 @@ class BaseComponent(BasicObject, ABC):
     states: dict[int, str] = field(default_factory=lambda: {1: "working", 0: "failed"})
 
     state: int = field(default=1, init=False)
+    initial_state: np.ndarray = field(default_factory=lambda: np.array([[0., WORKING_STATE]], dtype=float))    
     time_to_failure: float = field(init=False)
-    dt = 1.0                                    # time step for simulation/ repair
+    dt: float = field(default=1.0, init=False)
     current_time: float = field(default=None, init=False)
     history: np.ndarray = field(default_factory=lambda: np.empty((0, 2)), init=False)
     repairable: bool = field(default=False, init=False)
@@ -40,7 +42,7 @@ class BaseComponent(BasicObject, ABC):
         self.current_time = 0.0
         
         # Initialize history as an array with the initial state
-        self.history = np.array([[0.0, self.state]], dtype=float)
+        self.history = np.array(self.initial_state)
     
     # ----------------------------------------------------------------------
     # ABSTRACT METHODS: aLL subclasses must implement these functions
@@ -66,8 +68,7 @@ class BaseComponent(BasicObject, ABC):
     
     @abstractmethod
     def __repr__(self):
-        raise NotImplementedError
-    
+        raise NotImplementedError    
     # ----------------------------------------------------------------------
     # OPERATION STEP
     def step(self, dt: float = 1.0):
@@ -135,6 +136,41 @@ class BaseComponent(BasicObject, ABC):
                     self.repairable = True
                     self.repair(t_end)
 
+    # RELIABILITY MODELLING
+    def MRL(self, t, x):
+        """           
+        Mean Residual Life (MRL), i.e if component has survived until time t, 
+        whats the chance it will also survive until time t+x : 
+                      1   ∞
+        MRL(x)=     ────  ∫ R(t + x) dt
+                    R(x)  0
+        where R(t) = P(T > t) is the survival (reliability) function.   
+             
+        Args:
+            t (float): the current time the component has (or is expected to survive to)
+            x (float): the amount time after t which it is of interest to determine if 
+                       the component will survive until
+        """
+        
+        R_x = self.R_t(x)
+
+        if R_x <= 0:
+            return 0.0
+
+        integrand = lambda t: self.R_t(t + x)
+
+        integral, _ = quad(integrand, 0.0, np.inf, limit=200)
+
+        return integral / R_x
+    
+    
+    def RUL(self, t1, t2):
+        """ 
+        Given survival of the component up until time t1, what is the probability that
+        the component will continue to function until time t1+t2 (an additional t2 hours)
+        """             
+        return self.R_t(t1+t2) / self.R_t(t1)
+    
     # -------------------------------------------------------------------------
     # PLOTTING
     def plot_history(self, ax=None):

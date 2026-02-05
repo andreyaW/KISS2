@@ -7,7 +7,6 @@ class BinaryDiagnosticSensor(DiagnosticSensor):
     """
     Binary diagnostic sensor
     """
-
     def __init__(self, sensor_reliability: float):    
         self.sensor_reliability = sensor_reliability
 

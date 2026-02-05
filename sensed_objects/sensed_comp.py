@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-class BaseSensedComponent():
+@dataclass
+class BaseSensedComponent(ABC):
     comp: BaseComponent
     diagnostic_sensors : list[DiagnosticSensor]
     prognostic_sensor: PrognosticSensor
@@ -22,23 +23,21 @@ class BaseSensedComponent():
     # empty pandas array which will be filled with all true and sensed states and RUL predictions
     all_states: pd.DataFrame = field(init=False)
 
-    @abstractmethod
-    def fuse_sensor_readings(self, t: float) -> int:
-        """Return fused sensor reading from sensors at timestep t."""
-        pass
+    # @abstractmethod
+    # def fuse_sensor_readings(self, t: float) -> int:
+    #     """Return fused sensor reading from sensors at timestep t."""
+    #     pass
 
-    @abstractmethod
-    def __post_init__(self):
-        """ After defining the comp and it sensors, initialize the all states dataframe"""
+    # @abstractmethod
+    # def __post_init__(self):
+    #     """ After defining the comp and it sensors, initialize the all states dataframe"""
 
     def __repr__(self):
         block_print_statement =f"""
-        <>
         SensedComp: {self.comp.name}, 
-        diagnostic sensor type  = {type(self.diagnostic_sensors)}, 
+        diagnostic sensor type  = {type(self.diagnostic_sensors[0])}, 
         # of Diagnostic Senosors = {len(self.diagnostic_sensors)}
         prognostic sensor type  = {type(self.prognostic_sensor)}
-        <>
         """
         return block_print_statement
 
