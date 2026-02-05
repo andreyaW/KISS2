@@ -37,3 +37,7 @@ class ExponentialComponent(BaseComponent):
         
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name}, state={self.state}, distribution=Exponential)"
+    
+    def medianTTF(self):
+        """ The time corresponding to a reliability of 0.5"""
+        return np.ln(2)/self._lambda

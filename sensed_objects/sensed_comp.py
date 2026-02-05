@@ -42,6 +42,7 @@ class BaseSensedComponent(ABC):
         return block_print_statement
 
 
+    
     # -------------------------------------------------------------------------
     # COMMONLY NEEDED METHODS
     # -------------------------------------------------------------------------
@@ -51,6 +52,6 @@ class BaseSensedComponent(ABC):
     def plotHistory(self):
         pass
 
-    def plotRULHistory(self):
+    def plotMRLHistory(self):
         pass
 

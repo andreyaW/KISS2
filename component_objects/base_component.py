@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from objects import BasicObject
+from utils.helper_functions import is_numeric
 from scipy.integrate import quad
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sympy as sp
 
 # GLOBAL CONSTANTS FOR COMPONENT STATES
 WORKING_STATE = int(1)
@@ -137,33 +139,52 @@ class BaseComponent(BasicObject, ABC):
                     self.repair(t_end)
 
     # RELIABILITY MODELLING
-    def MRL(self, t, x):
+
+    def MRL(self, x=None):
         """           
         Mean Residual Life (MRL), i.e if component has survived until time t, 
         whats the chance it will also survive until time t+x : 
-                      1   ∞
-        MRL(x)=     ────  ∫ R(t + x) dt
-                    R(x)  0
-        where R(t) = P(T > t) is the survival (reliability) function.   
-             
+                
+        MRL(x)= E(T - x | T > x)       
+                1     ∞
+        MRL(x)=  ────   ∫ R(t) dt
+                R(x)  x
+            where R(t) = P(T > t) is the survival (reliability) function.   
+        
         Args:
-            t (float): the current time the component has (or is expected to survive to)
             x (float): the amount time after t which it is of interest to determine if 
-                       the component will survive until
+                    the component will survive until
         """
         
-        R_x = self.R_t(x)
+        # --- symbolic ---
+        if x is None:
+            ts = sp.symbols("t", positive=True)
+            x = sp.symbols("x", positive=True)
+            R_expr = self.R_t(ts)
+            MRL_expr = 1/self.R_t(x) * sp.integrate(R_expr, (ts, x, sp.oo))
+            return sp.simplify(MRL_expr)
+        
+        # --- numeric ---
+        if is_numeric(x):
+            x_arr = np.atleast_1d(x).astype(float)
+            out = np.zeros_like(x_arr, dtype=float)
 
-        if R_x <= 0:
-            return 0.0
+            for i, xi in enumerate(x_arr):
+                R_xi = float(self.R_t(xi))
+                if R_xi <= 0:
+                    out[i] = 0.0
+                    continue
 
-        integrand = lambda t: self.R_t(t + x)
+                # numeric integral using quad
+                integrand = lambda t: float(self.R_t(t))
+                integral, _ = quad(integrand, xi, np.inf, limit=200)
 
-        integral, _ = quad(integrand, 0.0, np.inf, limit=200)
+                out[i] = integral / R_xi
 
-        return integral / R_x
-    
-    
+            return out if np.ndim(x) else out.item()
+
+        raise TypeError("x must be None, float, or numpy array")
+
     def RUL(self, t1, t2):
         """ 
         Given survival of the component up until time t1, what is the probability that
