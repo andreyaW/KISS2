@@ -1,9 +1,9 @@
-from sensor_objects.prognostic_sensors.prognostic_sensor import PrognosticSensor
+from prognostic_sensor import BasePrognosticSensor
 from dataclasses import dataclass, field
 import numpy as np
 
 @dataclass
-class PF_PrognosticSensor(PrognosticSensor):
+class PFPrognosticSensor(BasePrognosticSensor):
     """
     Particle-filter-based failure time prognostics sensor
     with a single controllable sensor skill parameter.
@@ -29,10 +29,9 @@ class PF_PrognosticSensor(PrognosticSensor):
         )
         self.weights = np.ones(self.n) / self.n
 
-    def step(self, t):
+    def step(self, t, diagnostic_readings):
         true_state = 1 if t < self.true_ttf else 0
-        z = [s.generate_evidence(true_state) for s in self.sensors]
-
+        z = diagnostic_readings
         for i in range(self.n):
             predicted_state = 1 if t < self.particles[i] else 0
             for obs, s in zip(z, self.sensors):
@@ -50,8 +49,15 @@ class PF_PrognosticSensor(PrognosticSensor):
             self.particles = self.particles[idx]
             self.weights[:] = 1.0 / self.n
 
-    def predictFailure(self, t_array):
-        for t in t_array:
-            self.step(t)
+    def predictFailure(self, t, diagnostic_readings):
+        """
+        Predict expected failure time given current timestep t.
+        Accepts scalar or iterable.
+        """
+        if np.isscalar(t):
+            self.step(t, diagnostic_readings)
+        else:
+            for ti in t:
+                self.step(ti)
 
         return np.sum(self.weights * self.particles)
